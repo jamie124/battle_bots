@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+	<title>Battle Bot</title>
+</head>
+
+<body>
+    <div id="container" style="width:98%; height:98%; overflow:hidden; position:absolute; background-color:#000000"></div>
+
+</body>
+
+<script src="libs/three.min.js"></script>
+<script src="libs/ShaderTerrain.js"></script>
+<script src="libs/FirstPersonControls.js"></script>
+
+<script src="libs/ImprovedNoise.js"></script>
+
+<script src="libs/Detector.js"></script>
+<script src="libs/jquery-1.9.1.min.js"></script>
+<script src="libs/RequestAnimationFrame.js"></script>
+<script src="libs/loaders/ColladaLoader.js"></script>
+<script src="libs/stats.min.js"></script>
+
+<script src="battle_bots.js"></script>
+
+<script>
+
+	var container = null;
+	var renderer = null;
+	var scene = null;
+	var camera = null;
+	var mesh = null;
+	
+	$(document).ready(
+		function() {
+
+			// Setup Three.js
+			init();
+
+			animate();
+
+		}
+	);
+
+</script>
+</html>
