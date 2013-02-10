@@ -1,296 +1,361 @@
-// Battle Bots
+(function (bb, $, undefined) {
 
-var SCREEN_WIDTH = window.innerWidth;
-var SCREEN_HEIGHT = window.innerHeight;
-var FLOOR = -1000;
+    var worldWidth = 1024, worldHeight = 1024, segmentsWidth = 128, segmentsHeight = 128;
 
-var r = 0;
+    var initScene, render, createShape, NoiseGen,
+        renderer, render_stats, physics_stats, scene, light, ground, groundGeometry, groundMaterial, camera;
 
-var worldWidth = 128, worldHeight = 128, worldDepth = 128,
-	worldHalfWidth = worldWidth / 2, worldHalfDepth = worldDepth / 2;
+    var terrainData;
 
-var clock = new THREE.Clock();
+    var contentItemsLoaded = 0;
+    var totalContent = 0;
 
-var home = {x: 0, y: 0, z:0};
+    var isMouseDown = false, onMouseDownPosition = {x: 0, y: 0},
+        radius = 200, theta = 45, onMouseDownTheta = 45, phi = 60, onMouseDownPhi = 60;
 
-var player = {
-    position: {x: 0, y: 0, z:0},
-    rotation: {x: 0, y: 0, z:0}
-};
+    var testCube;
 
-var moveState = {
-    moving    : false,
-    front     : false,
-    Backwards : false,
-    left      : false,
-    right     : false,
-    speed     : .1,
-    angle     : 0
-};
+    bb.loadContent = function () {
 
-var terrainMesh;
+        contentItemsLoaded = 0;
 
-function init() {
 
-	container = document.getElementById( 'container' );
+        var heightImg = new Image();
 
-	camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 20000 );
+        heightImg.onload = function () {
+            terrainData = bb.generateHeight(heightImg);
 
-	scene = new THREE.Scene();
+            bb.contentLoaded();
+        };
+        heightImg.src = "./res/heightmap.jpg";
 
-	controls = new THREE.FirstPersonControls( camera );
-	controls.movementSpeed = 1000;
-	controls.lookSpeed = 0.1;
 
-	var heightImg = new Image();
-	
-	heightImg.onload = function () {
-		data = generateHeight(heightImg);
+        /*
+         var loader = new THREE.JSONLoader();
+         loader.load("./res/terrain.js", bb.setTerrain);
+         */
 
-		camera.position.y = data[ worldHalfWidth + worldHalfDepth * worldWidth ] + 500;
+        totalContent++;
+    };
 
-		var geometry = new THREE.PlaneGeometry( 7500, 7500, worldWidth - 1, worldDepth - 1 );
-		geometry.applyMatrix( new THREE.Matrix4().makeRotationX( - Math.PI / 2 ) );
+    /*
+     bb.setTerrain = function (terrainGeometry) {
+     groundGeometry = terrainGeometry;
+     }
+     */
 
-		for ( var i = 0, l = geometry.vertices.length; i < l; i ++ ) {
+    bb.contentLoaded = function () {
+        console.log('Content item finished loading.');
 
-			geometry.vertices[ i ].y = data[ i ] * 10;
+        contentItemsLoaded++;
 
-            if (data[i] > home.y) {
-                home.x = geometry.vertices[i].x;
-                home.y = geometry.vertices[i].y;
-                home.z = geometry.vertices[i].z;
+        if (contentItemsLoaded === totalContent) {
+            console.log('All content has finished loading.');
+
+            bb.init();
+        }
+
+    }
+
+
+    bb.init = function () {
+        TWEEN.start();
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+
+        var width = $('#container').width(),
+            height = $('#container').height();
+
+        renderer.setSize(width, height);
+        renderer.shadowMapEnabled = true;
+        renderer.shadowMapSoft = true;
+        document.getElementById('container').appendChild(renderer.domElement);
+
+        render_stats = new Stats();
+        render_stats.domElement.style.position = 'absolute';
+        render_stats.domElement.style.top = '0px';
+        render_stats.domElement.style.zIndex = 100;
+        document.getElementById('container').appendChild(render_stats.domElement);
+
+        physics_stats = new Stats();
+        physics_stats.domElement.style.position = 'absolute';
+        physics_stats.domElement.style.top = '50px';
+        physics_stats.domElement.style.zIndex = 100;
+        document.getElementById('container').appendChild(physics_stats.domElement);
+
+        scene = new Physijs.Scene({ fixedTimeStep: 1 / 120 });
+        scene.setGravity(new THREE.Vector3(0, -30, 0));
+        scene.addEventListener(
+            'update',
+            function () {
+                scene.simulate(undefined, 2);
+                physics_stats.update();
             }
-		}
+        );
 
-		//texture = new THREE.Texture( generateTexture( data, worldWidth, worldDepth ), new THREE.UVMapping(), THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping );
-		
-		texture = new THREE.ImageUtils.loadTexture( './res/grass.png', new THREE.UVMapping(), function() {  } );
+        camera = new THREE.PerspectiveCamera(
+            35,
+            window.innerWidth / window.innerHeight,
+            1,
+            1000
+        );
+        camera.position.set(200, 60, 200);
+        // camera.lookAt(scene.position);
+        scene.add(camera);
 
-		texture.needsUpdate = true;
+        // Light
+        light = new THREE.DirectionalLight(0xFFFFFF);
+        light.position.set(20, 40, -15);
+        light.target.position.copy(scene.position);
+        light.castShadow = true;
+        light.shadowCameraLeft = -60;
+        light.shadowCameraTop = -60;
+        light.shadowCameraRight = 60;
+        light.shadowCameraBottom = 60;
+        light.shadowCameraNear = 20;
+        light.shadowCameraFar = 200;
+        light.shadowBias = -.0001
+        light.shadowMapWidth = light.shadowMapHeight = 2048;
+        light.shadowDarkness = .7;
+        scene.add(light);
 
-		terrainMesh = new THREE.Mesh( geometry, new THREE.MeshBasicMaterial( { map: texture } ) );
-		scene.add( terrainMesh );
+        // Materials
+        groundMaterial = Physijs.createMaterial(
+            new THREE.MeshLambertMaterial({ map: THREE.ImageUtils.loadTexture('./res/grass.png') }),
+            .8, // high friction
+            .4 // low restitution
+        );
+        groundMaterial.map.wrapS = groundMaterial.map.wrapT = THREE.RepeatWrapping;
+        groundMaterial.map.repeat.set(2.5, 2.5);
 
-		renderer = new THREE.WebGLRenderer();
-		renderer.setSize( window.innerWidth, window.innerHeight );
+        // Ground
 
-		container.innerHTML = "";
+        NoiseGen = new SimplexNoise;
 
-		container.appendChild( renderer.domElement );
+        groundGeometry = new THREE.PlaneGeometry(worldWidth, worldHeight, segmentsWidth, segmentsHeight);
+        for (var i = 0; i < groundGeometry.vertices.length; i++) {
+            var vertex = groundGeometry.vertices[i];
+            // vertex.z = NoiseGen.noise(vertex.x / 10, vertex.y / 10) * 2;
 
-		stats = new Stats();
-		stats.domElement.style.position = 'absolute';
-		stats.domElement.style.top = '0px';
-		container.appendChild( stats.domElement );
+            vertex.z = terrainData[i];
+        }
 
-		window.addEventListener( 'resize', onWindowResize, false );
-	}
 
-	heightImg.src = "./res/heightmap_128.jpg";
-}
+        groundGeometry.computeFaceNormals();
+        groundGeometry.computeVertexNormals();
 
-function onWindowResize() {
+        // If your plane is not square as far as face count then the HeightfieldMesh
+        // takes two more arguments at the end: # of x faces and # of y faces that were passed to THREE.PlaneMaterial
+        ground = new Physijs.HeightfieldMesh(
+            groundGeometry,
+            groundMaterial,
+            0, // mass
+            segmentsWidth,
+            segmentsHeight
+        );
 
-	camera.aspect = window.innerWidth / window.innerHeight;
-	camera.updateProjectionMatrix();
+        ground.position.y = -100;
+        ground.rotation.x = Math.PI / -2;
+        ground.receiveShadow = true;
+        scene.add(ground);
 
-	renderer.setSize( window.innerWidth, window.innerHeight );
+        // camera.lookAt(ground.position);
 
-	controls.handleResize();
+        // Test stuff
+        var box_geometry = new THREE.CubeGeometry(3, 3, 3),
+            shape,
+            material = new THREE.MeshLambertMaterial({ opacity: 0, transparent: false });
 
-}
+        /*
+        testCube = new THREE.Mesh(
+            box_geometry,
+            material
+        );
+        */
+        testCube = new Physijs.BoxMesh(
+            box_geometry,
+            material
+        );
 
-function movePlayer() {
+        testCube.material.color.setRGB(255, 0, 0);
+        testCube.castShadow = true;
+        testCube.receiveShadow = true;
 
-    var speed = moveState.speed;
+        testCube.position.set(
+            0,
+            0,
+            0
+        );
 
-    var direction = moveState.angle;
-    if( moveState.front && !moveState.left && !moveState.Backwards && !moveState.right){direction +=   0}
-    if( moveState.front &&  moveState.left && !moveState.Backwards && !moveState.right){direction +=  45}
-    if(!moveState.front &&  moveState.left && !moveState.Backwards && !moveState.right){direction +=  90}
-    if(!moveState.front &&  moveState.left &&  moveState.Backwards && !moveState.right){direction += 135}
-    if(!moveState.front && !moveState.left &&  moveState.Backwards && !moveState.right){direction += 180}
-    if(!moveState.front && !moveState.left &&  moveState.Backwards &&  moveState.right){direction += 225}
-    if(!moveState.front && !moveState.left && !moveState.Backwards &&  moveState.right){direction += 270}
-    if( moveState.front && !moveState.left && !moveState.Backwards &&  moveState.right){direction += 315}
+        camera.lookAt(testCube.position);
 
-    player.rotation.y = (direction+270) * Math.PI / 180;
+        /*
+         shape.rotation.set(
+         Math.random() * Math.PI,
+         Math.random() * Math.PI,
+         Math.random() * Math.PI
+         );
+         */
 
-    player.direction = direction;
-    player.position.x -= Math.sin(direction * Math.PI / 180) * speed;
-    player.position.z -= Math.cos(direction * Math.PI / 180) * speed;
+        scene.add(testCube);
 
-    var vec = new THREE.Vector3( 0, -1, 0 );
-    var pos = new THREE.Vector3(player.position.x, player.position.y+2, player.position.z);
-    var raycaster = new THREE.Raycaster(pos, vec);
-    var intersects = raycaster.intersectObject(terrainMesh);
+        requestAnimationFrame(bb.render);
+        scene.simulate();
 
-    if (intersects.length>0) {
-        player.position.y = intersects[0].point.y+.5;
+        // bb.createShape();
+    };
+
+    bb.render = function () {
+        requestAnimationFrame(bb.render);
+
+        // Update camera look, move to actual movement method when implemented
+        camera.lookAt(testCube.position);
+
+        renderer.render(scene, camera);
+        render_stats.update();
+    };
+
+    bb.createShape = function () {
+
+        bb.doCreateShape();
+
+        // return function () {
+        //     setTimeout(bb.doCreateShape(), 1000);
+        // };
+    };
+
+    bb.doCreateShape = function () {
+        var addshapes = true,
+            shapes = 0,
+            box_geometry = new THREE.CubeGeometry(3, 3, 3),
+            sphere_geometry = new THREE.SphereGeometry(1.5, 32, 32),
+            cylinder_geometry = new THREE.CylinderGeometry(2, 2, 1, 32),
+            cone_geometry = new THREE.CylinderGeometry(0, 2, 4, 32),
+            octahedron_geometry = new THREE.OctahedronGeometry(1.7, 1),
+            torus_geometry = new THREE.TorusKnotGeometry(1.7, .2, 32, 4),
+            shape,
+            material = new THREE.MeshLambertMaterial({ opacity: 0, transparent: true });
+
+        switch (0) {
+            case 0:
+                shape = new Physijs.BoxMesh(
+                    box_geometry,
+                    material
+                );
+                break;
+
+            case 1:
+                shape = new Physijs.SphereMesh(
+                    sphere_geometry,
+                    material,
+                    undefined,
+                    { restitution: Math.random() * 1.5 }
+                );
+                break;
+        }
+
+        shape.material.color.setRGB(Math.random() * 100 / 100, Math.random() * 100 / 100, Math.random() * 100 / 100);
+        shape.castShadow = true;
+        shape.receiveShadow = true;
+
+        shape.position.set(
+            Math.random() * 30 - 15,
+            20,
+            Math.random() * 30 - 15
+        );
+
+        shape.rotation.set(
+            Math.random() * Math.PI,
+            Math.random() * Math.PI,
+            Math.random() * Math.PI
+        );
+
+        if (addshapes) {
+            shape.addEventListener('ready', createShape);
+        }
+        scene.add(shape);
+
+        // camera.lookAt(shape.position);
+
+        new TWEEN.Tween(shape.material).to({opacity: 1}, 500).start();
+
+        // document.getElementById('shapecount').textContent = (++shapes) + ' shapes created';
+    };
+
+    bb.generateHeight = function (heightImg) {
+        var canvas = document.createElement('canvas');
+        canvas.width = worldWidth;
+        canvas.height = worldHeight;
+
+        var context = canvas.getContext('2d');
+
+        context.drawImage(heightImg, 0, 0);
+
+        var size = worldWidth * worldHeight, data = new Float32Array(size);
+
+        for (var i = 0; i < size; i++) {
+            data[ i ] = 0;
+        }
+
+        var imgd = context.getImageData(0, 0, worldWidth, worldHeight);
+        var pix = imgd.data;
+
+        var j = 0;
+
+        for (var i = 0, n = pix.length; i < n; i += (4)) {
+            var all = pix[i] + pix[i + 1] + pix[i + 2];
+            data[j++] = all / 30;
+        }
+
+        return data;
+
+    };
+
+    /**
+     * Update camera position and look at
+     */
+    bb.updateCamera = function () {
+        camera.position.x = radius * Math.sin(theta * Math.PI / 360)
+            * Math.cos(phi * Math.PI / 360);
+        camera.position.y = radius * Math.sin(phi * Math.PI / 360);
+        camera.position.z = radius * Math.cos(theta * Math.PI / 360)
+            * Math.cos(phi * Math.PI / 360);
+
+        camera.updateMatrix();
     }
-}
 
-var timer;
+    bb.handleMouseUp = function () {
+        isMouseDown = false;
 
-document.addEventListener('keydown', function(e){
-    if( !/65|68|83|87|38|40|37|39/.test(e.keyCode)){ console.log(e.keyCode); return }
-    if( e.keyCode === 87 | e.keyCode === 38){
-        moveState.front     = true;
-        moveState.Backwards = false;
-    } else if ( e.keyCode === 83 | e.keyCode === 40){
-        moveState.Backwards = true;
-        moveState.front     = false;
-    } else if ( e.keyCode === 65 | e.keyCode === 37){
-        moveState.left  = true;
-        moveState.right = false;
-    } else if ( e.keyCode === 68 | e.keyCode === 39){
-        moveState.right = true;
-        moveState.left  = false;
+        onMouseDownPosition.x = event.clientX - onMouseDownPosition.x;
+        onMouseDownPosition.y = event.clientY - onMouseDownPosition.y;
+    };
+
+    bb.handleMouseDown = function (mouseEvent) {
+        isMouseDown = true;
+
+        onMouseDownTheta = theta;
+        onMouseDownPhi = phi;
+        onMouseDownPosition.x = mouseEvent.clientX;
+        onMouseDownPosition.y = mouseEvent.clientY;
+    };
+
+    bb.handleMouseMove = function (mouseEvent) {
+        mouseEvent.preventDefault();
+
+        if (isMouseDown) {
+
+            theta = -( ( mouseEvent.clientX - onMouseDownPosition.x ) * 0.5 )
+                + onMouseDownTheta;
+            phi = ( ( mouseEvent.clientY - onMouseDownPosition.y ) * 0.5 )
+                + onMouseDownPhi;
+
+            phi = Math.min(180, Math.max(0, phi));
+
+            bb.updateCamera();
+
+
+        }
     }
-    if(!moveState.moving){
-        if(player.state === 'stand')  {player.changeMotion('run');}
-        if(player.state === 'crstand'){player.changeMotion('crwalk');}
-        moveState.moving = true;
-        movePlayer();
-        timer = setInterval( function(){
-            movePlayer();
-        }, 1000 / 60);
-    }
-}, false);
 
-document.addEventListener('keyup', function(e){
-    if( !/65|68|83|87|38|40|37|39|84/.test(e.keyCode)){ return }
-    if( e.keyCode === 87 | e.keyCode === 38){
-        moveState.front = false;
-    } else if ( e.keyCode === 83 | e.keyCode === 40 ){
-        moveState.Backwards = false;
-    } else if ( e.keyCode === 65 | e.keyCode === 37){
-        moveState.left = false;
-    } else if ( e.keyCode === 68  | e.keyCode === 39){
-        moveState.right = false;
-    } else if (e.keyCode === 84 ) {
-        moveState.front = false;
-        moveState.Backwards = false;
-        moveState.left = false;
-        moveState.right = false;
-       // teleportHome();
-    }
-    if(!moveState.front && !moveState.Backwards && !moveState.left && !moveState.right){
-        player.changeMotion(player.state);
-        moveState.moving = false;
-        clearInterval(timer);
-    }
-}, false);
-
-function generateHeight(heightImg) {
-	var canvas = document.createElement( 'canvas' );
-		canvas.width = worldWidth;
-		canvas.height = worldHeight;
-	
-	var context = canvas.getContext( '2d' );
-
-	context.drawImage(heightImg,0,0);
-
-	var size = worldWidth * worldHeight, data = new Float32Array( size ),
-	perlin = new ImprovedNoise(), quality = 1, z = Math.random() * 100;
-
-	for ( var i = 0; i < size; i ++ ) {
-		data[ i ] = 0;
-	}
-
-	var imgd = context.getImageData(0, 0, worldWidth, worldHeight);
-	var pix = imgd.data;
-
-	var j=0;
-	
-	for (var i = 0, n = pix.length; i < n; i += (4)) {
-		var all = pix[i]+pix[i+1]+pix[i+2];
-		data[j++] = all/30;
-	}
-
-	return data;
-
-}
-
-function generateTexture( data, width, height ) {
-
-	var canvas, canvasScaled, context, image, imageData,
-		level, diff, vector3, sun, shade;
-
-	vector3 = new THREE.Vector3( 0, 0, 0 );
-
-	sun = new THREE.Vector3( 1, 255, 1 );
-	sun.normalize();
-
-	canvas = document.createElement( 'canvas' );
-	canvas.width = width;
-	canvas.height = height;
-
-	context = canvas.getContext( '2d' );
-	context.fillStyle = '#00a';
-	context.fillRect( 0, 0, width, height );
-
-	image = context.getImageData( 0, 0, canvas.width, canvas.height );
-	imageData = image.data;
-
-	for ( var i = 0, j = 0, l = imageData.length; i < l; i += 4, j ++ ) {
-
-		vector3.x = data[ j - 2 ] - data[ j + 2 ];
-		vector3.y = 2;
-		vector3.z = data[ j - width * 2 ] - data[ j + width * 2 ];
-		vector3.normalize();
-
-		shade = vector3.dot( sun );
-
-		imageData[ i ] = ( 96 + shade * 128 ) * ( 0.5 + data[ j ] * 0.007 );
-		imageData[ i + 1 ] = ( 32 + shade * 256 ) * ( 0.5 + data[ j ] * 0.007 );
-			imageData[ i + 2 ] = ( shade * 96 ) * ( 0.5 + data[ j ] * 0.007 );
-	}
-
-	context.putImageData( image, 0, 0 );
-
-	// Scaled 4x
-
-	canvasScaled = document.createElement( 'canvas' );
-	canvasScaled.width = width * 4;
-	canvasScaled.height = height * 4;
-
-	context = canvasScaled.getContext( '2d' );
-	context.scale( 4, 4 );
-	context.drawImage( canvas, 0, 0 );
-
-	image = context.getImageData( 0, 0, canvasScaled.width, canvasScaled.height );
-	imageData = image.data;
-
-	for ( var i = 0, l = imageData.length; i < l; i += 4 ) {
-
-		var v = ~~ ( Math.random() * 5 );
-
-		imageData[ i ] += v;
-		imageData[ i + 1 ] += v;
-		imageData[ i + 2 ] += v;
-
-	}
-
-	context.putImageData( image, 0, 0 );
-
-	return canvasScaled;
-
-}
-
-function animate() {
-
-	requestAnimationFrame( animate );
-
-	render();
-	stats.update();
-
-}
-
-function render() {
-
-	controls.update( clock.getDelta() );
-	renderer.render( scene, camera );
-
-}
+}(window.bb = window.bb || {}, jQuery));

@@ -1,0 +1,15 @@
+#container {
+    height: 800px;
+    width: 100%;
+
+   // position: absolute;
+    float: left;
+}
+
+#log {
+    height: 10%;
+    width: 100%;
+
+    //position: absolute;
+    float: left;
+}

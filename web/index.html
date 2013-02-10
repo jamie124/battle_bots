@@ -5,43 +5,65 @@
 	<title>Battle Bot</title>
 </head>
 
-<body>
-    <div id="container" style="width:98%; height:98%; overflow:hidden; position:absolute; background-color:#000000"></div>
+<link rel='stylesheet' href='css/bb.css'>
 
+<body>
+    <div id="container" ></div>
+    <div id="log"></div>
 </body>
 
 <script src="libs/three.min.js"></script>
 <script src="libs/ShaderTerrain.js"></script>
 <script src="libs/FirstPersonControls.js"></script>
 
-<script src="libs/ImprovedNoise.js"></script>
+<script src="libs/SimplexNoise.js"></script>
+
 
 <script src="libs/Detector.js"></script>
 <script src="libs/jquery-1.9.1.min.js"></script>
 <script src="libs/RequestAnimationFrame.js"></script>
 <script src="libs/loaders/ColladaLoader.js"></script>
 <script src="libs/stats.min.js"></script>
+<script type="text/javascript" src="libs/tween.min.js"></script>
 
 <script src="battle_bots.js"></script>
 
+<script src="libs/physi.js"></script>
+
 <script>
+
+    'use strict';
+
+    Physijs.scripts.worker = './libs/physijs_worker.js';
+    Physijs.scripts.ammo = './ammo.js';
 
 	var container = null;
 	var renderer = null;
-	var scene = null;
-	var camera = null;
 	var mesh = null;
 	
 	$(document).ready(
 		function() {
 
-			// Setup Three.js
-			init();
+            bb.loadContent();
 
-			animate();
+			// Initialise
+			//bb.init();
+
+			//animate();
 
 		}
 	);
 
+    $("#container").mouseup(function() {
+        bb.handleMouseUp();
+    });
+
+    $("#container").mousedown(function(event) {
+        bb.handleMouseDown(event);
+    });
+
+    $("#container").mousemove(function(event) {
+        bb.handleMouseMove(event);
+    });
 </script>
 </html>
