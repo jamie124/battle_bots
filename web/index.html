@@ -10,17 +10,24 @@
 <body>
     <div id="container" ></div>
     <div id="log"></div>
+    <div id="heightMap"></div>
 </body>
 
 <script src="libs/three.min.js"></script>
+
+<!--
 <script src="libs/ShaderTerrain.js"></script>
 <script src="libs/FirstPersonControls.js"></script>
+    -->
 
 <script src="libs/SimplexNoise.js"></script>
 
 
 <script src="libs/Detector.js"></script>
+
 <script src="libs/jquery-1.9.1.min.js"></script>
+<script src="libs/jquery.mousewheel.js"></script>
+
 <script src="libs/RequestAnimationFrame.js"></script>
 <script src="libs/loaders/ColladaLoader.js"></script>
 <script src="libs/stats.min.js"></script>
@@ -64,6 +71,19 @@
 
     $("#container").mousemove(function(event) {
         bb.handleMouseMove(event);
+    });
+
+    $('#container').on('mousewheel', function(event, delta) {
+        var dir = delta > 0 ? 'Up' : 'Down',
+                vel = Math.abs(delta);
+
+        if (delta > 0) {
+            bb.changeZoom(-1);
+        } else {
+            bb.changeZoom(1);
+        }
+
+        return false;
     });
 </script>
 </html>

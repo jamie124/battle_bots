@@ -13,3 +13,9 @@
     //position: absolute;
     float: left;
 }
+
+#heightMap {
+    height: 128px;
+    width: 128px;
+    float: left;
+}

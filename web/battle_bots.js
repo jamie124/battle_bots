@@ -1,6 +1,6 @@
 (function (bb, $, undefined) {
 
-    var worldWidth = 1024, worldHeight = 1024, segmentsWidth = 128, segmentsHeight = 128;
+    var worldWidth = 128, worldHeight = 128, segmentsWidth = 128, segmentsHeight = 128;
 
     var initScene, render, createShape, NoiseGen,
         renderer, render_stats, physics_stats, scene, light, ground, groundGeometry, groundMaterial, camera;
@@ -11,7 +11,7 @@
     var totalContent = 0;
 
     var isMouseDown = false, onMouseDownPosition = {x: 0, y: 0},
-        radius = 200, theta = 45, onMouseDownTheta = 45, phi = 60, onMouseDownPhi = 60;
+        radius = 300, theta = 45, onMouseDownTheta = 45, phi = 60, onMouseDownPhi = 60;
 
     var testCube;
 
@@ -27,7 +27,7 @@
 
             bb.contentLoaded();
         };
-        heightImg.src = "./res/heightmap.jpg";
+        heightImg.src = "./res/test_128.png";
 
 
         /*
@@ -85,6 +85,7 @@
 
         scene = new Physijs.Scene({ fixedTimeStep: 1 / 120 });
         scene.setGravity(new THREE.Vector3(0, -30, 0));
+
         scene.addEventListener(
             'update',
             function () {
@@ -97,7 +98,7 @@
             35,
             window.innerWidth / window.innerHeight,
             1,
-            1000
+            10000
         );
         camera.position.set(200, 60, 200);
         // camera.lookAt(scene.position);
@@ -121,41 +122,54 @@
 
         // Materials
         groundMaterial = Physijs.createMaterial(
-            new THREE.MeshLambertMaterial({ map: THREE.ImageUtils.loadTexture('./res/grass.png') }),
+            new THREE.MeshLambertMaterial({ map: THREE.ImageUtils.loadTexture('./res/grass.png'), transparent: true }),
             .8, // high friction
             .4 // low restitution
         );
         groundMaterial.map.wrapS = groundMaterial.map.wrapT = THREE.RepeatWrapping;
         groundMaterial.map.repeat.set(2.5, 2.5);
 
+        groundMaterial.transparent = true;
+
         // Ground
 
         NoiseGen = new SimplexNoise;
 
-        groundGeometry = new THREE.PlaneGeometry(worldWidth, worldHeight, segmentsWidth, segmentsHeight);
+        //groundGeometry = new THREE.PlaneGeometry(worldWidth, worldHeight, segmentsWidth, segmentsHeight);
+        groundGeometry = new THREE.PlaneGeometry(400, 400, worldWidth, worldHeight);
+
+
         for (var i = 0; i < groundGeometry.vertices.length; i++) {
             var vertex = groundGeometry.vertices[i];
-            // vertex.z = NoiseGen.noise(vertex.x / 10, vertex.y / 10) * 2;
+            //vertex.z = NoiseGen.noise(vertex.x / 10, vertex.y / 10) * 2;
 
             vertex.z = terrainData[i];
+
+           console.log(i + ': ' + vertex.z);
+
         }
 
 
         groundGeometry.computeFaceNormals();
         groundGeometry.computeVertexNormals();
+        groundGeometry.computeTangents();
+
+        groundGeometry.applyMatrix( new THREE.Matrix4().makeRotationX(  Math.PI / -2 )  );
 
         // If your plane is not square as far as face count then the HeightfieldMesh
         // takes two more arguments at the end: # of x faces and # of y faces that were passed to THREE.PlaneMaterial
+
         ground = new Physijs.HeightfieldMesh(
             groundGeometry,
-            groundMaterial,
-            0, // mass
-            segmentsWidth,
-            segmentsHeight
+            undefined,
+            0
         );
 
-        ground.position.y = -100;
-        ground.rotation.x = Math.PI / -2;
+
+       // ground = new THREE.Mesh(groundGeometry);
+
+        ground.position.y = 0;
+       // ground.rotation.x = Math.PI / 2;
         ground.receiveShadow = true;
         scene.add(ground);
 
@@ -164,7 +178,7 @@
         // Test stuff
         var box_geometry = new THREE.CubeGeometry(3, 3, 3),
             shape,
-            material = new THREE.MeshLambertMaterial({ opacity: 0, transparent: false });
+            material = new THREE.MeshLambertMaterial({ opacity: 100, transparent: false });
 
         /*
         testCube = new THREE.Mesh(
@@ -183,7 +197,7 @@
 
         testCube.position.set(
             0,
-            0,
+            50,
             0
         );
 
@@ -209,7 +223,10 @@
         requestAnimationFrame(bb.render);
 
         // Update camera look, move to actual movement method when implemented
-        camera.lookAt(testCube.position);
+        //camera.lookAt(testCube.position);
+        bb.updateCamera();
+
+        scene.simulate();
 
         renderer.render(scene, camera);
         render_stats.update();
@@ -282,30 +299,57 @@
         // document.getElementById('shapecount').textContent = (++shapes) + ' shapes created';
     };
 
+    /**
+     * Convert an heightmap image into height values.
+     * @param heightImg
+     * @return {Float32Array}
+     */
     bb.generateHeight = function (heightImg) {
         var canvas = document.createElement('canvas');
-        canvas.width = worldWidth;
-        canvas.height = worldHeight;
+
+        $('#heightMap').append(canvas);
+
+        var width = worldWidth,
+            height = worldHeight;
+
+        canvas.width = width;
+        canvas.height = height;
 
         var context = canvas.getContext('2d');
 
         context.drawImage(heightImg, 0, 0);
 
-        var size = worldWidth * worldHeight, data = new Float32Array(size);
+        var size = (width) * (height), data = new Float32Array(size);
 
         for (var i = 0; i < size; i++) {
             data[ i ] = 0;
         }
 
-        var imgd = context.getImageData(0, 0, worldWidth, worldHeight);
+        var imgd = context.getImageData(0, 0, width, height);
         var pix = imgd.data;
 
         var j = 0;
 
-        for (var i = 0, n = pix.length; i < n; i += (4)) {
+        var i = 0;
+        for (i = 0, n = pix.length; i < n; i += (4)) {
             var all = pix[i] + pix[i + 1] + pix[i + 2];
-            data[j++] = all / 30;
+            data[j++] = all / 20;
+
+           // console.log(j);
         }
+
+        /*
+        var line = '';
+
+        for (var h = 0; h < height; h++) {
+            line = '';
+            for (var w = 0; w < width; w++) {
+                line += data[(h * height) + w] + ' ';
+            }
+
+            console.log(line);
+        }
+         */
 
         return data;
 
@@ -318,8 +362,16 @@
         camera.position.x = radius * Math.sin(theta * Math.PI / 360)
             * Math.cos(phi * Math.PI / 360);
         camera.position.y = radius * Math.sin(phi * Math.PI / 360);
+
+        if (camera.position.y < 20) {
+            camera.position.y = 20;
+        }
+
+        //camera.position.y = 90;
         camera.position.z = radius * Math.cos(theta * Math.PI / 360)
             * Math.cos(phi * Math.PI / 360);
+
+        camera.lookAt(testCube.position);
 
         camera.updateMatrix();
     }
@@ -352,10 +404,30 @@
 
             phi = Math.min(180, Math.max(0, phi));
 
-            bb.updateCamera();
+            var msg = "Theta: ";
+            msg += theta + ", Phi: " + phi;
+            $("#log").html("<div>" + msg + "</div>");
+
+          //  bb.updateCamera();
 
 
         }
+    };
+
+    bb.changeZoom = function (direction) {
+        if (direction === 1) {
+            // Zoom in
+            radius += 10;
+        } else if (direction === -1) {
+            // Zoom out
+            radius -= 10;
+        }
+
+        if (radius <= 50) {
+            radius = 50;
+        } //else if (radius >= 300) {
+        //    radius = 300;
+        //}
     }
 
 }(window.bb = window.bb || {}, jQuery));
