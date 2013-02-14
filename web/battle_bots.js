@@ -133,11 +133,14 @@
 
         // Ground
 
-        NoiseGen = new SimplexNoise;
+        // NoiseGen = new SimplexNoise;
 
         //groundGeometry = new THREE.PlaneGeometry(worldWidth, worldHeight, segmentsWidth, segmentsHeight);
         groundGeometry = new THREE.PlaneGeometry(400, 400, worldWidth, worldHeight);
 
+
+        var terrainTestData = new Array();
+        var terrainVertex = {x:0, y:0, z:0};
 
         for (var i = 0; i < groundGeometry.vertices.length; i++) {
             var vertex = groundGeometry.vertices[i];
@@ -145,31 +148,49 @@
 
             vertex.z = terrainData[i];
 
-           console.log(i + ': ' + vertex.z);
+            terrainVertex = new Object();
+            terrainVertex.x = vertex.x;
+            terrainVertex.y = vertex.y;
+            terrainVertex.z = vertex.z;
+
+            terrainTestData.push(terrainVertex);
+            // console.log(i + ': ' + vertex.z);
 
         }
+
+        //console.log(groundGeometry.vertices);
+
+        $.post("/battlebots/debugLogging", {
+            "debug_type": "terrain",
+            "data": JSON.stringify(terrainTestData)
+        }, function (data) {
+            alert(data);
+        });
 
 
         groundGeometry.computeFaceNormals();
         groundGeometry.computeVertexNormals();
         groundGeometry.computeTangents();
 
-        groundGeometry.applyMatrix( new THREE.Matrix4().makeRotationX(  Math.PI / -2 )  );
+        groundGeometry.applyMatrix(new THREE.Matrix4().makeRotationX(Math.PI / -2));
 
         // If your plane is not square as far as face count then the HeightfieldMesh
         // takes two more arguments at the end: # of x faces and # of y faces that were passed to THREE.PlaneMaterial
 
+
         ground = new Physijs.HeightfieldMesh(
             groundGeometry,
-            undefined,
+            groundMaterial,
             0
         );
 
 
-       // ground = new THREE.Mesh(groundGeometry);
+
+
+        // ground = new THREE.Mesh(groundGeometry);
 
         ground.position.y = 0;
-       // ground.rotation.x = Math.PI / 2;
+        // ground.rotation.x = Math.PI / 2;
         ground.receiveShadow = true;
         scene.add(ground);
 
@@ -181,11 +202,11 @@
             material = new THREE.MeshLambertMaterial({ opacity: 100, transparent: false });
 
         /*
-        testCube = new THREE.Mesh(
-            box_geometry,
-            material
-        );
-        */
+         testCube = new THREE.Mesh(
+         box_geometry,
+         material
+         );
+         */
         testCube = new Physijs.BoxMesh(
             box_geometry,
             material
@@ -335,20 +356,20 @@
             var all = pix[i] + pix[i + 1] + pix[i + 2];
             data[j++] = all / 20;
 
-           // console.log(j);
+            // console.log(j);
         }
 
         /*
-        var line = '';
+         var line = '';
 
-        for (var h = 0; h < height; h++) {
-            line = '';
-            for (var w = 0; w < width; w++) {
-                line += data[(h * height) + w] + ' ';
-            }
+         for (var h = 0; h < height; h++) {
+         line = '';
+         for (var w = 0; w < width; w++) {
+         line += data[(h * height) + w] + ' ';
+         }
 
-            console.log(line);
-        }
+         console.log(line);
+         }
          */
 
         return data;
@@ -408,7 +429,7 @@
             msg += theta + ", Phi: " + phi;
             $("#log").html("<div>" + msg + "</div>");
 
-          //  bb.updateCamera();
+            //  bb.updateCamera();
 
 
         }

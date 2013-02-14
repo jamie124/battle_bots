@@ -17,6 +17,19 @@
         <servlet-class>com.battlebots.BattleBotsStartup</servlet-class>
         <load-on-startup>0</load-on-startup>
     </servlet>
+    <servlet>
+        <servlet-name>DebugLogging</servlet-name>
+        <servlet-class>com.battlebots.DebugLogging</servlet-class>
+    </servlet>
+    <servlet>
+        <servlet-name>BBServlet</servlet-name>
+        <servlet-class>com.battlebots.BBServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+    <servlet-name>DebugLogging</servlet-name>
+    <url-pattern>/debugLogging</url-pattern>
+</servlet-mapping>
+
     <servlet-mapping>
         <servlet-name>BattleBotsStartup</servlet-name>
         <url-pattern>/BattleBotsStartup</url-pattern>
