@@ -1,6 +1,6 @@
 (function (bb, $, undefined) {
 
-    var worldWidth = 128, worldHeight = 128, segmentsWidth = 128, segmentsHeight = 128;
+    var worldWidth = 8, worldHeight = 8, segmentsWidth = 128, segmentsHeight = 128;
 
     var initScene, render, createShape, NoiseGen,
         renderer, render_stats, physics_stats, scene, light, ground, groundGeometry, groundMaterial, camera;
@@ -27,7 +27,7 @@
 
             bb.contentLoaded();
         };
-        heightImg.src = "./res/test_128.png";
+        heightImg.src = "./res/test_8.png";
 
 
         /*
