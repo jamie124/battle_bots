@@ -1,6 +1,6 @@
 (function (bb, $, undefined) {
 
-    var worldWidth = 8, worldHeight = 8, segmentsWidth = 128, segmentsHeight = 128;
+    var worldWidth = 3, worldHeight = 3, segmentsWidth = 128, segmentsHeight = 128;
 
     var initScene, render, createShape, NoiseGen,
         renderer, render_stats, physics_stats, scene, light, ground, groundGeometry, groundMaterial, camera;
@@ -27,7 +27,7 @@
 
             bb.contentLoaded();
         };
-        heightImg.src = "./res/test_8.png";
+        heightImg.src = "./res/test_3.png";
 
 
         /*
@@ -136,43 +136,103 @@
         // NoiseGen = new SimplexNoise;
 
         //groundGeometry = new THREE.PlaneGeometry(worldWidth, worldHeight, segmentsWidth, segmentsHeight);
-        groundGeometry = new THREE.PlaneGeometry(400, 400, worldWidth, worldHeight);
+        groundGeometry = new THREE.PlaneGeometry(50, 50, worldWidth, worldHeight);
 
 
         var terrainTestData = new Array();
-        var terrainVertex = {x:0, y:0, z:0};
+        var terrainVertex = {x: 0, y: 0, z: 0};
 
-        for (var i = 0; i < groundGeometry.vertices.length; i++) {
-            var vertex = groundGeometry.vertices[i];
-            //vertex.z = NoiseGen.noise(vertex.x / 10, vertex.y / 10) * 2;
+        groundGeometry.applyMatrix(new THREE.Matrix4().makeRotationX(-Math.PI / 2));
 
-            vertex.z = terrainData[i];
+        groundGeometry.dynamic = true;
 
-            terrainVertex = new Object();
-            terrainVertex.x = vertex.x;
-            terrainVertex.y = vertex.y;
-            terrainVertex.z = vertex.z;
+        for (var h = 0; h <= worldHeight; h++) {
+            for (var w = 0; w <= worldWidth; w++) {
 
-            terrainTestData.push(terrainVertex);
-            // console.log(i + ': ' + vertex.z);
 
+                // var vertexPosition = (h * (worldWidth * 2)) + w;
+
+                var vertexOffset = (h > 0 ? (h * 2) : 0);
+                var terrainOffset = (h > 0 ? h  : 0);
+
+                //var vertexPosition = (h * (worldWidth * 2)) + w - offset;
+                var vertexPosition = (h * (worldWidth * 2)) + w - vertexOffset;
+
+                // console.log('h: ' + h + ' w: ' + w);
+                var terrainPosition = 0;
+
+                terrainPosition = (Math.round((h * (worldWidth * 2) + w) / worldWidth)) - vertexOffset  + (h <= 1 ? h : 0);
+               // terrainPosition = (Math.round((h * (worldWidth * 2) + w) / worldWidth))  + (h <= 1 ? h : 0);
+
+
+                // var terrainPosition = (h * worldHeight) + w;
+
+                var vertex = groundGeometry.vertices[vertexPosition];
+                //var vertex = groundGeometry.vertices[((h * (worldWidth * 2)) + w) % (worldWidth * 2)];
+
+                // console.log(Math.floor((h * (worldWidth * 2) + w) / worldWidth));
+                vertex.y = terrainData[terrainPosition];
+
+                // vertex.y = terrainData[((h * (worldWidth * 2)) + w) % (worldWidth * 2)];
+
+                terrainVertex = new Object();
+                terrainVertex.x = vertex.x;
+                terrainVertex.y = vertex.y;
+                terrainVertex.z = vertex.z;
+
+                console.log('Vertices position: ' + vertexPosition + '| Terrain: ' + terrainPosition + '| x: ' + terrainVertex.x + ' y: ' + terrainVertex.y + ' z: ' + terrainVertex.z);
+
+                terrainTestData.push(terrainVertex);
+            }
         }
+
+        console.log('Test');
+
+        /*
+         for (var i = 0; i < groundGeometry.vertices.length; i++) {
+
+         // groundGeometry.vertices[i].y = terrainData[i];
+
+
+         var vertex = groundGeometry.vertices[i];
+         //vertex.z = NoiseGen.noise(vertex.x / 10, vertex.y / 10) * 2;
+
+         vertex.y = terrainData[i];
+
+
+
+         terrainVertex = new Object();
+         terrainVertex.x = vertex.x;
+         terrainVertex.y = vertex.y;
+         terrainVertex.z = vertex.z;
+
+         terrainTestData.push(terrainVertex);
+
+         // console.log(i + ': ' + vertex.z);
+
+         }
+         */
+
 
         //console.log(groundGeometry.vertices);
 
+
         $.post("/battlebots/debugLogging", {
             "debug_type": "terrain",
-            "data": JSON.stringify(terrainTestData)
+            "data": JSON.stringify(terrainTestData),
+            "width": worldWidth * 2,
+            "height": worldHeight * 2
         }, function (data) {
             alert(data);
         });
 
 
+        // groundGeometry.computeCentroids();
         groundGeometry.computeFaceNormals();
         groundGeometry.computeVertexNormals();
-        groundGeometry.computeTangents();
+        //groundGeometry.computeTangents();
 
-        groundGeometry.applyMatrix(new THREE.Matrix4().makeRotationX(Math.PI / -2));
+        // groundGeometry.applyMatrix(new THREE.Matrix4().makeRotationX(Math.PI / -2));
 
         // If your plane is not square as far as face count then the HeightfieldMesh
         // takes two more arguments at the end: # of x faces and # of y faces that were passed to THREE.PlaneMaterial
@@ -184,10 +244,7 @@
             0
         );
 
-
-
-
-        // ground = new THREE.Mesh(groundGeometry);
+        //ground = new THREE.Mesh(groundGeometry);
 
         ground.position.y = 0;
         // ground.rotation.x = Math.PI / 2;
@@ -201,16 +258,19 @@
             shape,
             material = new THREE.MeshLambertMaterial({ opacity: 100, transparent: false });
 
+
+        testCube = new THREE.Mesh(
+            box_geometry,
+            material
+        );
+
+
         /*
-         testCube = new THREE.Mesh(
+         testCube = new Physijs.BoxMesh(
          box_geometry,
          material
          );
          */
-        testCube = new Physijs.BoxMesh(
-            box_geometry,
-            material
-        );
 
         testCube.material.color.setRGB(255, 0, 0);
         testCube.castShadow = true;
