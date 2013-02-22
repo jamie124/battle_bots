@@ -1,6 +1,6 @@
 (function (bb, $, undefined) {
 
-    var worldWidth = 3, worldHeight = 3, segmentsWidth = 128, segmentsHeight = 128;
+    var worldWidth = 8, worldLength = 8, segmentsWidth = 128, segmentsHeight = 128;
 
     var initScene, render, createShape, NoiseGen,
         renderer, render_stats, physics_stats, scene, light, ground, groundGeometry, groundMaterial, camera;
@@ -27,7 +27,7 @@
 
             bb.contentLoaded();
         };
-        heightImg.src = "./res/test_3.png";
+        heightImg.src = "./res/test_8.png";
 
 
         /*
@@ -136,7 +136,7 @@
         // NoiseGen = new SimplexNoise;
 
         //groundGeometry = new THREE.PlaneGeometry(worldWidth, worldHeight, segmentsWidth, segmentsHeight);
-        groundGeometry = new THREE.PlaneGeometry(50, 50, worldWidth, worldHeight);
+        groundGeometry = new THREE.PlaneGeometry(50, 50, worldWidth, worldLength);
 
 
         var terrainTestData = new Array();
@@ -146,45 +146,175 @@
 
         groundGeometry.dynamic = true;
 
-        for (var h = 0; h <= worldHeight; h++) {
-            for (var w = 0; w <= worldWidth; w++) {
+        /*
+         var numberOfVertices = ((worldHeight + 1) * (worldWidth + 1))
+
+         for (var i = 0; i < numberOfVertices; i++) {
+         var vertex = groundGeometry.vertices[i];
+
+         var terrainVertex = i % 2;
+
+         console.log(i + ': ' + terrainVertex);
+         vertex.y = 40;
+         }
+         */
 
 
-                // var vertexPosition = (h * (worldWidth * 2)) + w;
+        var theText = "Hello three.js! :)";
 
-                var vertexOffset = (h > 0 ? (h * 2) : 0);
-                var terrainOffset = (h > 0 ? h  : 0);
+        var hash = document.location.hash.substr(1);
 
-                //var vertexPosition = (h * (worldWidth * 2)) + w - offset;
-                var vertexPosition = (h * (worldWidth * 2)) + w - vertexOffset;
+        if (hash.length !== 0) {
 
-                // console.log('h: ' + h + ' w: ' + w);
-                var terrainPosition = 0;
+            theText = hash;
 
-                terrainPosition = (Math.round((h * (worldWidth * 2) + w) / worldWidth)) - vertexOffset  + (h <= 1 ? h : 0);
-               // terrainPosition = (Math.round((h * (worldWidth * 2) + w) / worldWidth))  + (h <= 1 ? h : 0);
+        }
+
+        var text3d = new THREE.TextGeometry(theText, {
+
+            size: 80,
+            height: 20,
+            curveSegments: 2,
+            font: "helvetiker"
+
+        });
+
+        text3d.computeBoundingBox();
+        var centerOffset = -0.5 * ( text3d.boundingBox.max.x - text3d.boundingBox.min.x );
+
+        var textMaterial = new THREE.MeshBasicMaterial({ color: Math.random() * 0xffffff, overdraw: true });
+        text = new THREE.Mesh(text3d, textMaterial);
+
+        text.position.x = 0;
+        text.position.y = 10;
+        text.position.z = 0;
+
+        text.rotation.x = 0;
+        text.rotation.y = Math.PI * 2;
+
+        var parent = new THREE.Object3D();
+        parent.add(text);
+
+        scene.add(parent);
 
 
-                // var terrainPosition = (h * worldHeight) + w;
+        var vertexPosition = 0;
+        for (var z = 0; z < worldLength; z++) {
+            for (var x = 0; x < worldWidth; x++) {
+
+                // if (z !== worldLength) {
+
+                var vertexOffset = (z > 0 ? (z * 2) : 0);
+
+                // var vertexPosition = (z * (worldWidth * 2)) + x - vertexOffset;
+                //var vertexPosition = (z * worldWidth) + x - vertexOffset;
+
 
                 var vertex = groundGeometry.vertices[vertexPosition];
-                //var vertex = groundGeometry.vertices[((h * (worldWidth * 2)) + w) % (worldWidth * 2)];
 
-                // console.log(Math.floor((h * (worldWidth * 2) + w) / worldWidth));
-                vertex.y = terrainData[terrainPosition];
+                vertex.y = terrainData[z][x];
 
-                // vertex.y = terrainData[((h * (worldWidth * 2)) + w) % (worldWidth * 2)];
+                console.log(z + ':' + x + '=' + vertexPosition + '| Y: ' + vertex.y);
 
                 terrainVertex = new Object();
                 terrainVertex.x = vertex.x;
                 terrainVertex.y = vertex.y;
                 terrainVertex.z = vertex.z;
 
-                console.log('Vertices position: ' + vertexPosition + '| Terrain: ' + terrainPosition + '| x: ' + terrainVertex.x + ' y: ' + terrainVertex.y + ' z: ' + terrainVertex.z);
 
                 terrainTestData.push(terrainVertex);
+
+                vertexPosition += 1;
+
+
+                //}
+
+                /*
+
+                 if (z === worldLength) {
+                 row = z - 1;
+                 } else {
+                 row = z;
+                 }
+
+                 var vertexOffset = (row > 0 ? (row * 2) : 0);
+
+                 // var vertexPosition = (z * (worldWidth * 2)) + x - vertexOffset;
+                 var vertexPosition = (row * worldWidth) + x - vertexOffset;
+
+                 console.log(row + ':' + x + '=' + vertexPosition + '| Offset: ' + vertexOffset);
+
+                 var vertex = groundGeometry.vertices[vertexPosition];
+
+                 vertex.y = terrainData[row][x];
+                 */
+
+
             }
         }
+
+
+        /*
+         for (var z = 0; z <= worldLength; z++) {
+         for (var x = 0; x <= worldWidth; x++) {
+
+         var vertexOffset = (z > 0 ? (z * 2) : 0);
+
+         var vertexPosition = (z * (worldWidth * 2)) + x - vertexOffset;
+
+         var vertex = groundGeometry.vertices[vertexPosition];
+
+         vertex.y = terrainData[z][x];
+
+         console.log(z + ':' + x + '=' + vertexPosition);
+         }
+         }
+         */
+
+
+        // groundGeometry.vertices[5].y = 30;
+
+        /*
+         for (var h = 0; h <= worldHeight; h++) {
+         for (var w = 0; w <= worldWidth; w++) {
+
+
+         // var vertexPosition = (h * (worldWidth * 2)) + w;
+
+         var vertexOffset = (h > 0 ? (h * 2) : 0);
+         var terrainOffset = (h > 0 ? h  : 0);
+
+         //var vertexPosition = (h * (worldWidth * 2)) + w - offset;
+         var vertexPosition = (h * (worldWidth * 2)) + w - vertexOffset;
+
+         // console.log('h: ' + h + ' w: ' + w);
+         var terrainPosition = 0;
+
+         terrainPosition = (Math.round((h * (worldWidth * 2) + w) / worldWidth)) - vertexOffset  + (h <= 1 ? h : 0);
+         // terrainPosition = (Math.round((h * (worldWidth * 2) + w) / worldWidth))  + (h <= 1 ? h : 0);
+
+
+         // var terrainPosition = (h * worldHeight) + w;
+
+         var vertex = groundGeometry.vertices[vertexPosition];
+         //var vertex = groundGeometry.vertices[((h * (worldWidth * 2)) + w) % (worldWidth * 2)];
+
+         // console.log(Math.floor((h * (worldWidth * 2) + w) / worldWidth));
+         vertex.y = terrainData[terrainPosition];
+
+         // vertex.y = terrainData[((h * (worldWidth * 2)) + w) % (worldWidth * 2)];
+
+         terrainVertex = new Object();
+         terrainVertex.x = vertex.x;
+         terrainVertex.y = vertex.y;
+         terrainVertex.z = vertex.z;
+
+         console.log('Vertices position: ' + vertexPosition + '| Terrain: ' + terrainPosition + '| x: ' + terrainVertex.x + ' y: ' + terrainVertex.y + ' z: ' + terrainVertex.z);
+
+         terrainTestData.push(terrainVertex);
+         }
+         }
+         */
 
         console.log('Test');
 
@@ -220,8 +350,8 @@
         $.post("/battlebots/debugLogging", {
             "debug_type": "terrain",
             "data": JSON.stringify(terrainTestData),
-            "width": worldWidth * 2,
-            "height": worldHeight * 2
+            "width": worldWidth,
+            "height": worldLength
         }, function (data) {
             alert(data);
         });
@@ -238,13 +368,15 @@
         // takes two more arguments at the end: # of x faces and # of y faces that were passed to THREE.PlaneMaterial
 
 
-        ground = new Physijs.HeightfieldMesh(
-            groundGeometry,
-            groundMaterial,
-            0
-        );
+        /*
+         ground = new Physijs.HeightfieldMesh(
+         groundGeometry,
+         groundMaterial,
+         0
+         );
+         */
 
-        //ground = new THREE.Mesh(groundGeometry);
+        ground = new THREE.Mesh(groundGeometry);
 
         ground.position.y = 0;
         // ground.rotation.x = Math.PI / 2;
@@ -383,15 +515,21 @@
     /**
      * Convert an heightmap image into height values.
      * @param heightImg
-     * @return {Float32Array}
      */
+
     bb.generateHeight = function (heightImg) {
+        var data = new Array(worldLength);
+
+        for (var h = 0; h < worldLength; h++) {
+            data[h] = new Array(worldWidth);
+        }
+
         var canvas = document.createElement('canvas');
 
         $('#heightMap').append(canvas);
 
         var width = worldWidth,
-            height = worldHeight;
+            height = worldLength;
 
         canvas.width = width;
         canvas.height = height;
@@ -400,41 +538,46 @@
 
         context.drawImage(heightImg, 0, 0);
 
-        var size = (width) * (height), data = new Float32Array(size);
-
-        for (var i = 0; i < size; i++) {
-            data[ i ] = 0;
-        }
-
-        var imgd = context.getImageData(0, 0, width, height);
-        var pix = imgd.data;
-
-        var j = 0;
-
-        var i = 0;
-        for (i = 0, n = pix.length; i < n; i += (4)) {
-            var all = pix[i] + pix[i + 1] + pix[i + 2];
-            data[j++] = all / 20;
-
-            // console.log(j);
-        }
-
         /*
-         var line = '';
+         var size = (width) * (height), data = new Float32Array(size);
 
-         for (var h = 0; h < height; h++) {
-         line = '';
-         for (var w = 0; w < width; w++) {
-         line += data[(h * height) + w] + ' ';
-         }
-
-         console.log(line);
+         for (var i = 0; i < size; i++) {
+         data[ i ] = 0;
          }
          */
+
+        /*
+         var imgd = context.getImageData(0, 0, width, height);
+         var pix = imgd.data;
+
+         var j = 0;
+
+         var i = 0;
+         for (i = 0, n = pix.length; i < n; i += (4)) {
+         var all = pix[i] + pix[i + 1] + pix[i + 2];
+         data[j++] = all / 20;
+
+         // console.log(j);
+         }
+         */
+
+        for (var z = 0; z < worldLength; z++) {
+            for (var x = 0; x < worldWidth; x++) {
+
+                var imgd = context.getImageData(x, z, 1, 1);
+                var pix = imgd.data;
+
+                var all = pix[0] + pix[ 1] + pix[ 2];
+                // console.log('z: ' + z + ' x: ' + x + ' = ' + (all / 20));
+
+                data[z][x] = all / 20;
+            }
+        }
 
         return data;
 
     };
+
 
     /**
      * Update camera position and look at
