@@ -1,6 +1,6 @@
 (function (bb, $, undefined) {
 
-    var worldWidth = 8, worldLength = 8, segmentsWidth = 128, segmentsHeight = 128;
+    var worldWidth = 128, worldLength = 128, segmentsWidth = 128, segmentsHeight = 128;
 
     var initScene, render, createShape, NoiseGen,
         renderer, render_stats, physics_stats, scene, light, ground, groundGeometry, groundMaterial, camera;
@@ -27,7 +27,7 @@
 
             bb.contentLoaded();
         };
-        heightImg.src = "./res/test_8.png";
+        heightImg.src = "./res/heightmap_128.png";
 
 
         /*
@@ -122,7 +122,7 @@
 
         // Materials
         groundMaterial = Physijs.createMaterial(
-            new THREE.MeshLambertMaterial({ map: THREE.ImageUtils.loadTexture('./res/grass.png'), transparent: true }),
+            new THREE.MeshLambertMaterial({ map: THREE.ImageUtils.loadTexture('./res/grass.png'), transparent: false }),
             .8, // high friction
             .4 // low restitution
         );
@@ -136,7 +136,7 @@
         // NoiseGen = new SimplexNoise;
 
         //groundGeometry = new THREE.PlaneGeometry(worldWidth, worldHeight, segmentsWidth, segmentsHeight);
-        groundGeometry = new THREE.PlaneGeometry(50, 50, worldWidth, worldLength);
+        groundGeometry = new THREE.PlaneGeometry(100, 100, worldWidth - 1, worldLength - 1);
 
 
         var terrainTestData = new Array();
@@ -159,62 +159,17 @@
          }
          */
 
-
-        var theText = "Hello three.js! :)";
-
-        var hash = document.location.hash.substr(1);
-
-        if (hash.length !== 0) {
-
-            theText = hash;
-
-        }
-
-        var text3d = new THREE.TextGeometry(theText, {
-
-            size: 80,
-            height: 20,
-            curveSegments: 2,
-            font: "helvetiker"
-
-        });
-
-        text3d.computeBoundingBox();
-        var centerOffset = -0.5 * ( text3d.boundingBox.max.x - text3d.boundingBox.min.x );
-
-        var textMaterial = new THREE.MeshBasicMaterial({ color: Math.random() * 0xffffff, overdraw: true });
-        text = new THREE.Mesh(text3d, textMaterial);
-
-        text.position.x = 0;
-        text.position.y = 10;
-        text.position.z = 0;
-
-        text.rotation.x = 0;
-        text.rotation.y = Math.PI * 2;
-
-        var parent = new THREE.Object3D();
-        parent.add(text);
-
-        scene.add(parent);
-
-
         var vertexPosition = 0;
         for (var z = 0; z < worldLength; z++) {
             for (var x = 0; x < worldWidth; x++) {
-
-                // if (z !== worldLength) {
-
-                var vertexOffset = (z > 0 ? (z * 2) : 0);
-
-                // var vertexPosition = (z * (worldWidth * 2)) + x - vertexOffset;
-                //var vertexPosition = (z * worldWidth) + x - vertexOffset;
-
 
                 var vertex = groundGeometry.vertices[vertexPosition];
 
                 vertex.y = terrainData[z][x];
 
-                console.log(z + ':' + x + '=' + vertexPosition + '| Y: ' + vertex.y);
+                //console.log(z + ':' + x + '=' + vertexPosition + '| Y: ' + vertex.y);
+
+                // bb.createText(z + ':' + x , vertex.x, vertex.y, vertex.z);
 
                 terrainVertex = new Object();
                 terrainVertex.x = vertex.x;
@@ -226,135 +181,24 @@
 
                 vertexPosition += 1;
 
-
-                //}
-
-                /*
-
-                 if (z === worldLength) {
-                 row = z - 1;
-                 } else {
-                 row = z;
-                 }
-
-                 var vertexOffset = (row > 0 ? (row * 2) : 0);
-
-                 // var vertexPosition = (z * (worldWidth * 2)) + x - vertexOffset;
-                 var vertexPosition = (row * worldWidth) + x - vertexOffset;
-
-                 console.log(row + ':' + x + '=' + vertexPosition + '| Offset: ' + vertexOffset);
-
-                 var vertex = groundGeometry.vertices[vertexPosition];
-
-                 vertex.y = terrainData[row][x];
-                 */
-
-
             }
         }
 
 
-        /*
-         for (var z = 0; z <= worldLength; z++) {
-         for (var x = 0; x <= worldWidth; x++) {
-
-         var vertexOffset = (z > 0 ? (z * 2) : 0);
-
-         var vertexPosition = (z * (worldWidth * 2)) + x - vertexOffset;
-
-         var vertex = groundGeometry.vertices[vertexPosition];
-
-         vertex.y = terrainData[z][x];
-
-         console.log(z + ':' + x + '=' + vertexPosition);
-         }
-         }
-         */
-
-
-        // groundGeometry.vertices[5].y = 30;
-
-        /*
-         for (var h = 0; h <= worldHeight; h++) {
-         for (var w = 0; w <= worldWidth; w++) {
-
-
-         // var vertexPosition = (h * (worldWidth * 2)) + w;
-
-         var vertexOffset = (h > 0 ? (h * 2) : 0);
-         var terrainOffset = (h > 0 ? h  : 0);
-
-         //var vertexPosition = (h * (worldWidth * 2)) + w - offset;
-         var vertexPosition = (h * (worldWidth * 2)) + w - vertexOffset;
-
-         // console.log('h: ' + h + ' w: ' + w);
-         var terrainPosition = 0;
-
-         terrainPosition = (Math.round((h * (worldWidth * 2) + w) / worldWidth)) - vertexOffset  + (h <= 1 ? h : 0);
-         // terrainPosition = (Math.round((h * (worldWidth * 2) + w) / worldWidth))  + (h <= 1 ? h : 0);
-
-
-         // var terrainPosition = (h * worldHeight) + w;
-
-         var vertex = groundGeometry.vertices[vertexPosition];
-         //var vertex = groundGeometry.vertices[((h * (worldWidth * 2)) + w) % (worldWidth * 2)];
-
-         // console.log(Math.floor((h * (worldWidth * 2) + w) / worldWidth));
-         vertex.y = terrainData[terrainPosition];
-
-         // vertex.y = terrainData[((h * (worldWidth * 2)) + w) % (worldWidth * 2)];
-
-         terrainVertex = new Object();
-         terrainVertex.x = vertex.x;
-         terrainVertex.y = vertex.y;
-         terrainVertex.z = vertex.z;
-
-         console.log('Vertices position: ' + vertexPosition + '| Terrain: ' + terrainPosition + '| x: ' + terrainVertex.x + ' y: ' + terrainVertex.y + ' z: ' + terrainVertex.z);
-
-         terrainTestData.push(terrainVertex);
-         }
-         }
-         */
-
-        console.log('Test');
-
-        /*
-         for (var i = 0; i < groundGeometry.vertices.length; i++) {
-
-         // groundGeometry.vertices[i].y = terrainData[i];
-
-
-         var vertex = groundGeometry.vertices[i];
-         //vertex.z = NoiseGen.noise(vertex.x / 10, vertex.y / 10) * 2;
-
-         vertex.y = terrainData[i];
-
-
-
-         terrainVertex = new Object();
-         terrainVertex.x = vertex.x;
-         terrainVertex.y = vertex.y;
-         terrainVertex.z = vertex.z;
-
-         terrainTestData.push(terrainVertex);
-
-         // console.log(i + ': ' + vertex.z);
-
-         }
-         */
 
 
         //console.log(groundGeometry.vertices);
 
-
-        $.post("/battlebots/debugLogging", {
-            "debug_type": "terrain",
-            "data": JSON.stringify(terrainTestData),
-            "width": worldWidth,
-            "height": worldLength
-        }, function (data) {
-            alert(data);
-        });
+        /*
+         $.post("/battlebots/debugLogging", {
+         "debug_type": "terrain",
+         "data": JSON.stringify(terrainTestData),
+         "width": worldWidth,
+         "height": worldLength
+         }, function (data) {
+         alert(data);
+         });
+         */
 
 
         // groundGeometry.computeCentroids();
@@ -368,17 +212,18 @@
         // takes two more arguments at the end: # of x faces and # of y faces that were passed to THREE.PlaneMaterial
 
 
-        /*
-         ground = new Physijs.HeightfieldMesh(
-         groundGeometry,
-         groundMaterial,
-         0
-         );
-         */
+        ground = new Physijs.HeightfieldMesh(
+            groundGeometry,
+            groundMaterial,
+            0
+        );
 
-        ground = new THREE.Mesh(groundGeometry);
 
-        ground.position.y = 0;
+        ground.position.y = 150;
+
+        // ground = new THREE.Mesh(groundGeometry);
+
+       // ground.position.y = 100;
         // ground.rotation.x = Math.PI / 2;
         ground.receiveShadow = true;
         scene.add(ground);
@@ -391,26 +236,32 @@
             material = new THREE.MeshLambertMaterial({ opacity: 100, transparent: false });
 
 
+        /*
         testCube = new THREE.Mesh(
             box_geometry,
             material
         );
+          */
 
-
-        /*
+                  /*
          testCube = new Physijs.BoxMesh(
          box_geometry,
          material
          );
-         */
+             */
 
-        testCube.material.color.setRGB(255, 0, 0);
+        testCube = new Physijs.BoxMesh(
+            new THREE.CubeGeometry(5, 5, 5),
+            new THREE.MeshBasicMaterial({color: 0x888888})
+        );
+
+       // testCube.material.color.setRGB(255, 0, 0);
         testCube.castShadow = true;
         testCube.receiveShadow = true;
 
         testCube.position.set(
             0,
-            50,
+            200,
             0
         );
 
@@ -452,6 +303,51 @@
         // return function () {
         //     setTimeout(bb.doCreateShape(), 1000);
         // };
+    };
+
+    bb.createText = function (text, x, y, z) {
+
+        var text3d = new THREE.TextGeometry(text, {
+
+            size: 1,
+            height: 2,
+            curveSegments: 8,
+
+            font: "optimer",
+            weight: "normal",
+            style: "normal",
+
+            bevelThickness: 0.1,
+            bevelSize: 0.1,
+            bevelEnabled: false,
+
+
+            material: 0,
+            extrudeMaterial: 1
+
+        });
+
+        text3d.computeBoundingBox();
+        text3d.computeVertexNormals();
+
+        var centerOffset = -0.5 * ( text3d.boundingBox.max.x - text3d.boundingBox.min.x );
+
+        var textMaterial = new THREE.MeshBasicMaterial({ color: Math.random() * 0xffffff, overdraw: true });
+        text = new THREE.Mesh(text3d, textMaterial);
+
+        text.position.x = x;
+        text.position.y = y;
+        text.position.z = z;
+
+        text.rotation.x = 30;
+        //  text.rotation.y = 45;
+        // text.rotation.z = 180;
+
+        var parent = new THREE.Object3D();
+        parent.add(text);
+
+
+        scene.add(parent);
     };
 
     bb.doCreateShape = function () {
