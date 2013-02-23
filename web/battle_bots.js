@@ -1,6 +1,6 @@
 (function (bb, $, undefined) {
 
-    var worldWidth = 128, worldLength = 128, segmentsWidth = 128, segmentsHeight = 128;
+    var worldWidth = 256, worldLength = 256, segmentsWidth = 128, segmentsHeight = 128;
 
     var initScene, render, createShape, NoiseGen,
         renderer, render_stats, physics_stats, scene, light, ground, groundGeometry, groundMaterial, camera;
@@ -27,7 +27,7 @@
 
             bb.contentLoaded();
         };
-        heightImg.src = "./res/heightmap_128.png";
+        heightImg.src = "./res/heightmap_256.png";
 
 
         /*
@@ -83,8 +83,8 @@
         physics_stats.domElement.style.zIndex = 100;
         document.getElementById('container').appendChild(physics_stats.domElement);
 
-        scene = new Physijs.Scene({ fixedTimeStep: 1 / 120 });
-        scene.setGravity(new THREE.Vector3(0, -30, 0));
+        scene = new Physijs.Scene({ reportsize: 50, fixedTimeStep: 1 / 60 });
+        scene.setGravity(new THREE.Vector3(0, -3, 0));
 
         scene.addEventListener(
             'update',
@@ -121,22 +121,29 @@
         scene.add(light);
 
         // Materials
+        /*
         groundMaterial = Physijs.createMaterial(
-            new THREE.MeshLambertMaterial({ map: THREE.ImageUtils.loadTexture('./res/grass.png'), transparent: false }),
-            .8, // high friction
-            .4 // low restitution
+            new THREE.MeshLambertMaterial({ map: THREE.ImageUtils.loadTexture('./res/grass.png')}),
+            .9, // high friction
+            .2 // low restitution
         );
-        groundMaterial.map.wrapS = groundMaterial.map.wrapT = THREE.RepeatWrapping;
-        groundMaterial.map.repeat.set(2.5, 2.5);
+        */
+        var groundMaterial = Physijs.createMaterial(
+            new THREE.MeshLambertMaterial({ map: THREE.ImageUtils.loadTexture( './res/grass.png' ), ambient: 0xFFFFFF }),
+            .9, // high friction
+            .2 // low restitution
+        );
 
-        groundMaterial.transparent = true;
+        groundMaterial.map.wrapS = groundMaterial.map.wrapT = THREE.RepeatWrapping;
+        groundMaterial.map.repeat.set(5, 5);
+
 
         // Ground
 
         // NoiseGen = new SimplexNoise;
 
         //groundGeometry = new THREE.PlaneGeometry(worldWidth, worldHeight, segmentsWidth, segmentsHeight);
-        groundGeometry = new THREE.PlaneGeometry(100, 100, worldWidth - 1, worldLength - 1);
+        groundGeometry = new THREE.PlaneGeometry(800, 800, worldWidth - 1, worldLength - 1);
 
 
         var terrainTestData = new Array();
@@ -145,19 +152,6 @@
         groundGeometry.applyMatrix(new THREE.Matrix4().makeRotationX(-Math.PI / 2));
 
         groundGeometry.dynamic = true;
-
-        /*
-         var numberOfVertices = ((worldHeight + 1) * (worldWidth + 1))
-
-         for (var i = 0; i < numberOfVertices; i++) {
-         var vertex = groundGeometry.vertices[i];
-
-         var terrainVertex = i % 2;
-
-         console.log(i + ': ' + terrainVertex);
-         vertex.y = 40;
-         }
-         */
 
         var vertexPosition = 0;
         for (var z = 0; z < worldLength; z++) {
@@ -171,20 +165,18 @@
 
                 // bb.createText(z + ':' + x , vertex.x, vertex.y, vertex.z);
 
-                terrainVertex = new Object();
-                terrainVertex.x = vertex.x;
-                terrainVertex.y = vertex.y;
-                terrainVertex.z = vertex.z;
+                // terrainVertex = new Object();
+                //  terrainVertex.x = vertex.x;
+                // terrainVertex.y = vertex.y;
+                // terrainVertex.z = vertex.z;
 
 
-                terrainTestData.push(terrainVertex);
+                // terrainTestData.push(terrainVertex);
 
                 vertexPosition += 1;
 
             }
         }
-
-
 
 
         //console.log(groundGeometry.vertices);
@@ -201,10 +193,10 @@
          */
 
 
-        // groundGeometry.computeCentroids();
+        groundGeometry.computeCentroids();
         groundGeometry.computeFaceNormals();
         groundGeometry.computeVertexNormals();
-        //groundGeometry.computeTangents();
+        groundGeometry.computeTangents();
 
         // groundGeometry.applyMatrix(new THREE.Matrix4().makeRotationX(Math.PI / -2));
 
@@ -215,72 +207,87 @@
         ground = new Physijs.HeightfieldMesh(
             groundGeometry,
             groundMaterial,
-            0
+            0,
+            worldWidth - 1,
+            worldLength - 1
         );
 
 
-        ground.position.y = 150;
+        //ground.position.y = 150;
 
         // ground = new THREE.Mesh(groundGeometry);
 
-       // ground.position.y = 100;
+        // ground.position.y = 100;
         // ground.rotation.x = Math.PI / 2;
         ground.receiveShadow = true;
-        scene.add(ground);
+       scene.add(ground);
+
+
+        var table_material = Physijs.createMaterial(
+            new THREE.MeshLambertMaterial({ map: THREE.ImageUtils.loadTexture( './res/grass.png' ), ambient: 0xFFFFFF }),
+            .9, // high friction
+            .2 // low restitution
+        );
+        table_material.map.wrapS = table_material.map.wrapT = THREE.RepeatWrapping;
+        table_material.map.repeat.set( 5, 5 );
+
+       var table = new Physijs.PlaneMesh(
+            new THREE.PlaneGeometry(50, 50, 50, 50),
+            table_material,
+            0, // mass
+            { restitution: .2, friction: .8 }
+        );
+        table.position.y = 20;
+        table.receiveShadow = true;
+        table.rotation.x = 180;
+
+        //scene.add( table );
 
         // camera.lookAt(ground.position);
 
-        // Test stuff
-        var box_geometry = new THREE.CubeGeometry(3, 3, 3),
-            shape,
-            material = new THREE.MeshLambertMaterial({ opacity: 100, transparent: false });
-
 
         /*
-        testCube = new THREE.Mesh(
-            box_geometry,
-            material
-        );
-          */
+         testCube = new THREE.Mesh(
+         box_geometry,
+         material
+         );
+         */
 
-                  /*
+        /*
          testCube = new Physijs.BoxMesh(
          box_geometry,
          material
          );
-             */
-
-        testCube = new Physijs.BoxMesh(
-            new THREE.CubeGeometry(5, 5, 5),
-            new THREE.MeshBasicMaterial({color: 0x888888})
-        );
-
-       // testCube.material.color.setRGB(255, 0, 0);
-        testCube.castShadow = true;
-        testCube.receiveShadow = true;
-
-        testCube.position.set(
-            0,
-            200,
-            0
-        );
-
-        camera.lookAt(testCube.position);
-
-        /*
-         shape.rotation.set(
-         Math.random() * Math.PI,
-         Math.random() * Math.PI,
-         Math.random() * Math.PI
-         );
          */
 
-        scene.add(testCube);
+        /*
+         testCube = new Physijs.BoxMesh(
+         new THREE.CubeGeometry(5, 5, 5),
+         new THREE.MeshBasicMaterial({color: 0x888888})
+         );
+
+         // testCube.material.color.setRGB(255, 0, 0);
+         testCube.castShadow = true;
+         testCube.receiveShadow = true;
+
+         testCube.position.set(
+         0,
+         200,
+         0
+         );
+
+         camera.lookAt(testCube.position);
+
+
+
+         scene.add(testCube);
+         */
 
         requestAnimationFrame(bb.render);
+
         scene.simulate();
 
-        // bb.createShape();
+        bb.createShape();
     };
 
     bb.render = function () {
@@ -290,7 +297,7 @@
         //camera.lookAt(testCube.position);
         bb.updateCamera();
 
-        scene.simulate();
+        //  scene.simulate();
 
         renderer.render(scene, camera);
         render_stats.update();
@@ -351,7 +358,7 @@
     };
 
     bb.doCreateShape = function () {
-        var addshapes = true,
+        var addshapes = false,
             shapes = 0,
             box_geometry = new THREE.CubeGeometry(3, 3, 3),
             sphere_geometry = new THREE.SphereGeometry(1.5, 32, 32),
@@ -362,16 +369,16 @@
             shape,
             material = new THREE.MeshLambertMaterial({ opacity: 0, transparent: true });
 
-        switch (0) {
+        switch (1) {
             case 0:
-                shape = new Physijs.BoxMesh(
+                testCube = new Physijs.BoxMesh(
                     box_geometry,
                     material
                 );
                 break;
 
             case 1:
-                shape = new Physijs.SphereMesh(
+                testCube = new Physijs.SphereMesh(
                     sphere_geometry,
                     material,
                     undefined,
@@ -380,17 +387,25 @@
                 break;
         }
 
-        shape.material.color.setRGB(Math.random() * 100 / 100, Math.random() * 100 / 100, Math.random() * 100 / 100);
-        shape.castShadow = true;
-        shape.receiveShadow = true;
+        testCube.material.color.setRGB(Math.random() * 100 / 100, Math.random() * 100 / 100, Math.random() * 100 / 100);
+        testCube.castShadow = true;
+        testCube.receiveShadow = true;
 
-        shape.position.set(
-            Math.random() * 30 - 15,
-            20,
-            Math.random() * 30 - 15
+        /*
+         testCube.position.set(
+         Math.random() * 30 - 15,
+         20,
+         Math.random() * 30 - 15
+         );
+         */
+
+        testCube.position.set(
+            0,
+            30,
+            0
         );
 
-        shape.rotation.set(
+        testCube.rotation.set(
             Math.random() * Math.PI,
             Math.random() * Math.PI,
             Math.random() * Math.PI
@@ -399,11 +414,11 @@
         if (addshapes) {
             shape.addEventListener('ready', createShape);
         }
-        scene.add(shape);
+        scene.add(testCube);
 
-        // camera.lookAt(shape.position);
+        camera.lookAt(testCube.position);
 
-        new TWEEN.Tween(shape.material).to({opacity: 1}, 500).start();
+        new TWEEN.Tween(testCube.material).to({opacity: 1}, 500).start();
 
         // document.getElementById('shapecount').textContent = (++shapes) + ' shapes created';
     };
