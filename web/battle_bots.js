@@ -13,7 +13,7 @@
     var isMouseDown = false, onMouseDownPosition = {x: 0, y: 0},
         radius = 300, theta = 45, onMouseDownTheta = 45, phi = 60, onMouseDownPhi = 60;
 
-    var testCube;
+    var testCubeMesh;
 
     bb.loadContent = function () {
 
@@ -23,7 +23,7 @@
         var heightImg = new Image();
 
         heightImg.onload = function () {
-            terrainData = bb.generateHeight(heightImg);
+            terrainData = bb.generateHeightData(heightImg);
 
             bb.contentLoaded();
         };
@@ -122,14 +122,14 @@
 
         // Materials
         /*
-        groundMaterial = Physijs.createMaterial(
-            new THREE.MeshLambertMaterial({ map: THREE.ImageUtils.loadTexture('./res/grass.png')}),
-            .9, // high friction
-            .2 // low restitution
-        );
-        */
+         groundMaterial = Physijs.createMaterial(
+         new THREE.MeshLambertMaterial({ map: THREE.ImageUtils.loadTexture('./res/grass.png')}),
+         .9, // high friction
+         .2 // low restitution
+         );
+         */
         var groundMaterial = Physijs.createMaterial(
-            new THREE.MeshLambertMaterial({ map: THREE.ImageUtils.loadTexture( './res/grass.png' ), ambient: 0xFFFFFF }),
+            new THREE.MeshLambertMaterial({ map: THREE.ImageUtils.loadTexture('./res/grass.png'), ambient: 0xFFFFFF }),
             .9, // high friction
             .2 // low restitution
         );
@@ -139,162 +139,51 @@
 
 
         // Ground
-
-        // NoiseGen = new SimplexNoise;
-
-        //groundGeometry = new THREE.PlaneGeometry(worldWidth, worldHeight, segmentsWidth, segmentsHeight);
-        groundGeometry = new THREE.PlaneGeometry(800, 800, worldWidth - 1, worldLength - 1);
-
-
-        var terrainTestData = new Array();
-        var terrainVertex = {x: 0, y: 0, z: 0};
-
-        groundGeometry.applyMatrix(new THREE.Matrix4().makeRotationX(-Math.PI / 2));
-
-        groundGeometry.dynamic = true;
-
-        var vertexPosition = 0;
-        for (var z = 0; z < worldLength; z++) {
-            for (var x = 0; x < worldWidth; x++) {
-
-                var vertex = groundGeometry.vertices[vertexPosition];
-
-                vertex.y = terrainData[z][x];
-
-                //console.log(z + ':' + x + '=' + vertexPosition + '| Y: ' + vertex.y);
-
-                // bb.createText(z + ':' + x , vertex.x, vertex.y, vertex.z);
-
-                // terrainVertex = new Object();
-                //  terrainVertex.x = vertex.x;
-                // terrainVertex.y = vertex.y;
-                // terrainVertex.z = vertex.z;
-
-
-                // terrainTestData.push(terrainVertex);
-
-                vertexPosition += 1;
-
-            }
-        }
-
-
-        //console.log(groundGeometry.vertices);
-
-        /*
-         $.post("/battlebots/debugLogging", {
-         "debug_type": "terrain",
-         "data": JSON.stringify(terrainTestData),
-         "width": worldWidth,
-         "height": worldLength
-         }, function (data) {
-         alert(data);
-         });
-         */
-
-
-        groundGeometry.computeCentroids();
-        groundGeometry.computeFaceNormals();
-        groundGeometry.computeVertexNormals();
-        groundGeometry.computeTangents();
-
-        // groundGeometry.applyMatrix(new THREE.Matrix4().makeRotationX(Math.PI / -2));
-
-        // If your plane is not square as far as face count then the HeightfieldMesh
-        // takes two more arguments at the end: # of x faces and # of y faces that were passed to THREE.PlaneMaterial
-
-
-        ground = new Physijs.HeightfieldMesh(
-            groundGeometry,
-            groundMaterial,
-            0,
-            worldWidth - 1,
-            worldLength - 1
-        );
-
-
-        //ground.position.y = 150;
-
-        // ground = new THREE.Mesh(groundGeometry);
-
-        // ground.position.y = 100;
-        // ground.rotation.x = Math.PI / 2;
-        ground.receiveShadow = true;
-       scene.add(ground);
-
-
-        var table_material = Physijs.createMaterial(
-            new THREE.MeshLambertMaterial({ map: THREE.ImageUtils.loadTexture( './res/grass.png' ), ambient: 0xFFFFFF }),
-            .9, // high friction
-            .2 // low restitution
-        );
-        table_material.map.wrapS = table_material.map.wrapT = THREE.RepeatWrapping;
-        table_material.map.repeat.set( 5, 5 );
-
-       var table = new Physijs.PlaneMesh(
-            new THREE.PlaneGeometry(50, 50, 50, 50),
-            table_material,
-            0, // mass
-            { restitution: .2, friction: .8 }
-        );
-        table.position.y = 20;
-        table.receiveShadow = true;
-        table.rotation.x = 180;
-
-        //scene.add( table );
-
-        // camera.lookAt(ground.position);
+        groundGeometry = bb.convertHeightDataToMesh(terrainData, worldWidth, worldLength);
 
 
         /*
-         testCube = new THREE.Mesh(
-         box_geometry,
-         material
-         );
-         */
-
-        /*
-         testCube = new Physijs.BoxMesh(
-         box_geometry,
-         material
-         );
-         */
-
-        /*
-         testCube = new Physijs.BoxMesh(
-         new THREE.CubeGeometry(5, 5, 5),
-         new THREE.MeshBasicMaterial({color: 0x888888})
-         );
-
-         // testCube.material.color.setRGB(255, 0, 0);
-         testCube.castShadow = true;
-         testCube.receiveShadow = true;
-
-         testCube.position.set(
+         ground = new Physijs.HeightfieldMesh(
+         groundGeometry,
+         groundMaterial,
          0,
-         200,
-         0
+         worldWidth - 1,
+         worldLength - 1
          );
-
-         camera.lookAt(testCube.position);
-
-
-
-         scene.add(testCube);
          */
+
+        ground = new THREE.Mesh(groundGeometry, groundMaterial);
+
+        ground.receiveShadow = true;
+
+        scene.add(ground);
+
+
+        // Add test box
+        testCubeMesh =  bb.createBoxMesh();
+
+        scene.add(testCubeMesh);
+
+        camera.lookAt(testCubeMesh.position);
+
+
+
 
         requestAnimationFrame(bb.render);
 
         scene.simulate();
 
-        bb.createShape();
+      //  bb.createShape();
     };
 
+    /**
+     * Render to screen
+     */
     bb.render = function () {
         requestAnimationFrame(bb.render);
 
         // Update camera look, move to actual movement method when implemented
-        //camera.lookAt(testCube.position);
+        //camera.lookAt(testCubeMesh.position);
         bb.updateCamera();
 
         //  scene.simulate();
@@ -303,15 +192,23 @@
         render_stats.update();
     };
 
+    // Create a shape
     bb.createShape = function () {
 
-        bb.doCreateShape();
+        bb.doCreateShapePhysijs();
 
         // return function () {
         //     setTimeout(bb.doCreateShape(), 1000);
         // };
     };
 
+    /**
+     * Draw text at a position
+     * @param text
+     * @param x
+     * @param y
+     * @param z
+     */
     bb.createText = function (text, x, y, z) {
 
         var text3d = new THREE.TextGeometry(text, {
@@ -357,7 +254,29 @@
         scene.add(parent);
     };
 
-    bb.doCreateShape = function () {
+    bb.createBoxMesh = function () {
+        var cubeGeometry = new THREE.CubeGeometry(3, 3, 3),
+            material = new THREE.MeshLambertMaterial({ opacity: 100, transparent: true });
+
+        var cubeMesh = new THREE.Mesh(
+            cubeGeometry,
+            material);
+
+        cubeMesh.material.color.setRGB(Math.random() * 100 / 100, Math.random() * 100 / 100, Math.random() * 100 / 100);
+        cubeMesh.castShadow = true;
+        cubeMesh.receiveShadow = true;
+
+        cubeMesh.position.set(
+            0,
+            30,
+            0
+        );
+
+        return cubeMesh;
+
+    };
+
+    bb.doCreateShapePhysijs = function () {
         var addshapes = false,
             shapes = 0,
             box_geometry = new THREE.CubeGeometry(3, 3, 3),
@@ -371,14 +290,14 @@
 
         switch (1) {
             case 0:
-                testCube = new Physijs.BoxMesh(
+                testCubeMesh = new Physijs.BoxMesh(
                     box_geometry,
                     material
                 );
                 break;
 
             case 1:
-                testCube = new Physijs.SphereMesh(
+                testCubeMesh = new Physijs.SphereMesh(
                     sphere_geometry,
                     material,
                     undefined,
@@ -387,25 +306,25 @@
                 break;
         }
 
-        testCube.material.color.setRGB(Math.random() * 100 / 100, Math.random() * 100 / 100, Math.random() * 100 / 100);
-        testCube.castShadow = true;
-        testCube.receiveShadow = true;
+        testCubeMesh.material.color.setRGB(Math.random() * 100 / 100, Math.random() * 100 / 100, Math.random() * 100 / 100);
+        testCubeMesh.castShadow = true;
+        testCubeMesh.receiveShadow = true;
 
         /*
-         testCube.position.set(
+         testCubeMesh.position.set(
          Math.random() * 30 - 15,
          20,
          Math.random() * 30 - 15
          );
          */
 
-        testCube.position.set(
+        testCubeMesh.position.set(
             0,
             30,
             0
         );
 
-        testCube.rotation.set(
+        testCubeMesh.rotation.set(
             Math.random() * Math.PI,
             Math.random() * Math.PI,
             Math.random() * Math.PI
@@ -414,11 +333,11 @@
         if (addshapes) {
             shape.addEventListener('ready', createShape);
         }
-        scene.add(testCube);
+        scene.add(testCubeMesh);
 
-        camera.lookAt(testCube.position);
+        camera.lookAt(testCubeMesh.position);
 
-        new TWEEN.Tween(testCube.material).to({opacity: 1}, 500).start();
+        new TWEEN.Tween(testCubeMesh.material).to({opacity: 1}, 500).start();
 
         // document.getElementById('shapecount').textContent = (++shapes) + ' shapes created';
     };
@@ -427,8 +346,7 @@
      * Convert an heightmap image into height values.
      * @param heightImg
      */
-
-    bb.generateHeight = function (heightImg) {
+    bb.generateHeightData = function (heightImg) {
         var data = new Array(worldLength);
 
         for (var h = 0; h < worldLength; h++) {
@@ -437,6 +355,7 @@
 
         var canvas = document.createElement('canvas');
 
+        // Debugging
         $('#heightMap').append(canvas);
 
         var width = worldWidth,
@@ -448,29 +367,6 @@
         var context = canvas.getContext('2d');
 
         context.drawImage(heightImg, 0, 0);
-
-        /*
-         var size = (width) * (height), data = new Float32Array(size);
-
-         for (var i = 0; i < size; i++) {
-         data[ i ] = 0;
-         }
-         */
-
-        /*
-         var imgd = context.getImageData(0, 0, width, height);
-         var pix = imgd.data;
-
-         var j = 0;
-
-         var i = 0;
-         for (i = 0, n = pix.length; i < n; i += (4)) {
-         var all = pix[i] + pix[i + 1] + pix[i + 2];
-         data[j++] = all / 20;
-
-         // console.log(j);
-         }
-         */
 
         for (var z = 0; z < worldLength; z++) {
             for (var x = 0; x < worldWidth; x++) {
@@ -489,6 +385,71 @@
 
     };
 
+    /**
+     * Convert the height values into a Plane Geometry
+     * @param data
+     * @param width
+     * @param length
+     * @return {THREE.PlaneGeometry}
+     */
+    bb.convertHeightDataToMesh = function (data, width, length) {
+        var mesh = new THREE.PlaneGeometry(800, 800, width - 1, length - 1);
+
+
+        var terrainTestData = new Array();
+        var terrainVertex = {x: 0, y: 0, z: 0};
+
+        mesh.applyMatrix(new THREE.Matrix4().makeRotationX(-Math.PI / 2));
+
+        mesh.dynamic = true;
+
+        var vertexPosition = 0;
+        for (var z = 0; z < worldLength; z++) {
+            for (var x = 0; x < worldWidth; x++) {
+
+                var vertex = mesh.vertices[vertexPosition];
+
+                vertex.y = terrainData[z][x];
+
+                //console.log(z + ':' + x + '=' + vertexPosition + '| Y: ' + vertex.y);
+
+                // bb.createText(z + ':' + x , vertex.x, vertex.y, vertex.z);
+
+                // terrainVertex = new Object();
+                //  terrainVertex.x = vertex.x;
+                // terrainVertex.y = vertex.y;
+                // terrainVertex.z = vertex.z;
+
+
+                // terrainTestData.push(terrainVertex);
+
+                vertexPosition += 1;
+
+            }
+        }
+
+
+        //console.log(groundGeometry.vertices);
+
+        /*
+         $.post("/battlebots/debugLogging", {
+         "debug_type": "terrain",
+         "data": JSON.stringify(terrainTestData),
+         "width": worldWidth,
+         "height": worldLength
+         }, function (data) {
+         alert(data);
+         });
+         */
+
+
+        mesh.computeCentroids();
+        mesh.computeFaceNormals();
+        mesh.computeVertexNormals();
+        mesh.computeTangents();
+
+        return mesh;
+    }
 
     /**
      * Update camera position and look at
@@ -506,7 +467,7 @@
         camera.position.z = radius * Math.cos(theta * Math.PI / 360)
             * Math.cos(phi * Math.PI / 360);
 
-        camera.lookAt(testCube.position);
+        camera.lookAt(testCubeMesh.position);
 
         camera.updateMatrix();
     }
