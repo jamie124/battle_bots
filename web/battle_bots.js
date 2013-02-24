@@ -5,13 +5,15 @@
     var initScene, render, createShape, NoiseGen,
         renderer, render_stats, physics_stats, scene, light, ground, groundGeometry, groundMaterial, camera;
 
+    var characterNode;
+
     var terrainData;
 
     var contentItemsLoaded = 0;
     var totalContent = 0;
 
     var isMouseDown = false, onMouseDownPosition = {x: 0, y: 0},
-        radius = 300, theta = 45, onMouseDownTheta = 45, phi = 60, onMouseDownPhi = 60;
+        radius = 50, theta = 45, onMouseDownTheta = 45, phi = 60, onMouseDownPhi = 60;
 
     var testCubeMesh;
 
@@ -27,7 +29,7 @@
 
             bb.contentLoaded();
         };
-        heightImg.src = "./res/heightmap_256.png";
+        heightImg.src = "./res/test_world.png";
 
 
         /*
@@ -83,8 +85,8 @@
         physics_stats.domElement.style.zIndex = 100;
         document.getElementById('container').appendChild(physics_stats.domElement);
 
-        scene = new Physijs.Scene({ reportsize: 50, fixedTimeStep: 1 / 60 });
-        scene.setGravity(new THREE.Vector3(0, -3, 0));
+        scene = new Physijs.Scene({ fixedTimeStep: 1 / 120 });
+        scene.setGravity(new THREE.Vector3(0, -30, 0));
 
         scene.addEventListener(
             'update',
@@ -120,60 +122,36 @@
         light.shadowDarkness = .7;
         scene.add(light);
 
-        // Materials
-        /*
-         groundMaterial = Physijs.createMaterial(
-         new THREE.MeshLambertMaterial({ map: THREE.ImageUtils.loadTexture('./res/grass.png')}),
-         .9, // high friction
-         .2 // low restitution
-         );
-         */
-        var groundMaterial = Physijs.createMaterial(
-            new THREE.MeshLambertMaterial({ map: THREE.ImageUtils.loadTexture('./res/grass.png'), ambient: 0xFFFFFF }),
-            .9, // high friction
-            .2 // low restitution
-        );
-
-        groundMaterial.map.wrapS = groundMaterial.map.wrapT = THREE.RepeatWrapping;
-        groundMaterial.map.repeat.set(5, 5);
-
-
         // Ground
         groundGeometry = bb.convertHeightDataToMesh(terrainData, worldWidth, worldLength);
 
+        groundMaterial = Physijs.createMaterial(
+            new THREE.MeshLambertMaterial({ map: THREE.ImageUtils.loadTexture('./res/grass.png') }),
+            .8, // high friction
+            .4 // low restitution
+        );
+        groundMaterial.map.wrapS = groundMaterial.map.wrapT = THREE.RepeatWrapping;
+        groundMaterial.map.repeat.set(2.5, 2.5);
 
-        /*
-         ground = new Physijs.HeightfieldMesh(
-         groundGeometry,
-         groundMaterial,
-         0,
-         worldWidth - 1,
-         worldLength - 1
-         );
-         */
+        ground = new Physijs.HeightfieldMesh(
+            groundGeometry,
+            groundMaterial,
+            0
+        );
 
-        ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        ground.rotation.x = Math.PI / -2;
+
 
         ground.receiveShadow = true;
 
         scene.add(ground);
 
 
-        // Add test box
-        testCubeMesh =  bb.createBoxMesh();
-
-        scene.add(testCubeMesh);
-
-        camera.lookAt(testCubeMesh.position);
-
-
-
-
         requestAnimationFrame(bb.render);
 
         scene.simulate();
 
-      //  bb.createShape();
+        bb.createShapes();
     };
 
     /**
@@ -188,11 +166,13 @@
 
         //  scene.simulate();
 
+        // camera.lookAt(testCubeMesh.position);
+
         renderer.render(scene, camera);
         render_stats.update();
     };
 
-    // Create a shape
+// Create a shape
     bb.createShape = function () {
 
         bb.doCreateShapePhysijs();
@@ -234,7 +214,7 @@
         text3d.computeBoundingBox();
         text3d.computeVertexNormals();
 
-        var centerOffset = -0.5 * ( text3d.boundingBox.max.x - text3d.boundingBox.min.x );
+        // var centerOffset = -0.5 * ( text3d.boundingBox.max.x - text3d.boundingBox.min.x );
 
         var textMaterial = new THREE.MeshBasicMaterial({ color: Math.random() * 0xffffff, overdraw: true });
         text = new THREE.Mesh(text3d, textMaterial);
@@ -286,7 +266,12 @@
             octahedron_geometry = new THREE.OctahedronGeometry(1.7, 1),
             torus_geometry = new THREE.TorusKnotGeometry(1.7, .2, 32, 4),
             shape,
-            material = new THREE.MeshLambertMaterial({ opacity: 0, transparent: true });
+        // material = new THREE.MeshLambertMaterial({ opacity: 0, transparent: true });
+            material = Physijs.createMaterial(
+                new THREE.MeshPhongMaterial({ color: 0xff00ff }),
+                .4, // low friction
+                .6 // high restitution
+            );
 
         switch (1) {
             case 0:
@@ -320,7 +305,7 @@
 
         testCubeMesh.position.set(
             0,
-            30,
+            100,
             0
         );
 
@@ -331,7 +316,7 @@
         );
 
         if (addshapes) {
-            shape.addEventListener('ready', createShape);
+            testCubeMesh.addEventListener('ready', createShape);
         }
         scene.add(testCubeMesh);
 
@@ -340,6 +325,43 @@
         new TWEEN.Tween(testCubeMesh.material).to({opacity: 1}, 500).start();
 
         // document.getElementById('shapecount').textContent = (++shapes) + ' shapes created';
+    };
+
+    bb.createShapes = function () {
+        var box_geometry = new THREE.CubeGeometry(3, 3, 3),
+            sphere_geometry = new THREE.SphereGeometry(1.5, 32, 32);
+
+
+        var material = new THREE.MeshLambertMaterial({ opacity: 0, transparent: true });
+
+
+        characterNode = new Physijs.SphereMesh(
+            sphere_geometry,
+            material,
+            undefined,
+            { restitution: Math.random() * 1.5 }
+        );
+
+        characterNode.material.color.setRGB(Math.random() * 100 / 100, Math.random() * 100 / 100, Math.random() * 100 / 100);
+        characterNode.castShadow = true;
+        //characterNode.receiveShadow = true;
+
+        characterNode.position.set(
+            0,
+            30,
+            0
+        );
+
+        characterNode.rotation.set(
+            Math.random() * Math.PI,
+            Math.random() * Math.PI,
+            Math.random() * Math.PI
+        );
+
+        scene.add(characterNode);
+
+        new TWEEN.Tween(characterNode.material).to({opacity: 1}, 500).start();
+
     };
 
     /**
@@ -393,27 +415,38 @@
      * @return {THREE.PlaneGeometry}
      */
     bb.convertHeightDataToMesh = function (data, width, length) {
-        var mesh = new THREE.PlaneGeometry(800, 800, width - 1, length - 1);
+        var mesh = new THREE.PlaneGeometry(200, 200, width - 1, length - 1);
 
+        //var mesh  = new THREE.LandscapeGeometry(1000, 1000, 10, 10);
 
-        var terrainTestData = new Array();
-        var terrainVertex = {x: 0, y: 0, z: 0};
+        // var terrainTestData = new Array();
+        // var terrainVertex = {x: 0, y: 0, z: 0};
 
-        mesh.applyMatrix(new THREE.Matrix4().makeRotationX(-Math.PI / 2));
+        // mesh.applyMatrix(new THREE.Matrix4().makeRotationX(-Math.PI / 2));
 
-        mesh.dynamic = true;
+        // mesh.dynamic = true;
 
         var vertexPosition = 0;
+
+        /*
+         var count = 0;
+         for ( var i = 0, l = mesh.vertices.length; i < l; i ++ ) {
+         mesh.vertices[ i ].y = ( Math.sin( ( i + count ) * 0.3 ) * 50 ) + ( Math.sin( ( i + count ) * 0.5 ) * 50 );
+         count += 0.1;
+         }
+         */
+
         for (var z = 0; z < worldLength; z++) {
             for (var x = 0; x < worldWidth; x++) {
 
                 var vertex = mesh.vertices[vertexPosition];
 
-                vertex.y = terrainData[z][x];
+                vertex.z = terrainData[z][x];
+
 
                 //console.log(z + ':' + x + '=' + vertexPosition + '| Y: ' + vertex.y);
 
-                // bb.createText(z + ':' + x , vertex.x, vertex.y, vertex.z);
+                //  bb.createText(z + ':' + x, vertex.x, vertex.y, vertex.z);
 
                 // terrainVertex = new Object();
                 //  terrainVertex.x = vertex.x;
@@ -428,6 +461,17 @@
             }
         }
 
+        /*
+         NoiseGen = new SimplexNoise;
+
+         var mesh = new THREE.PlaneGeometry(75, 75, 50, 50);
+         for (var i = 0; i < mesh.vertices.length; i++) {
+         var vertex = mesh.vertices[i];
+         vertex.z = NoiseGen.noise(vertex.x / 10, vertex.y / 10) * 2;
+         }
+
+         */
+        //  mesh.rotation.x = Math.PI / -2;
 
         //console.log(groundGeometry.vertices);
 
@@ -443,10 +487,10 @@
          */
 
 
-        mesh.computeCentroids();
+        //  mesh.computeCentroids();
         mesh.computeFaceNormals();
         mesh.computeVertexNormals();
-        mesh.computeTangents();
+        // mesh.computeTangents();
 
         return mesh;
     }
@@ -467,7 +511,9 @@
         camera.position.z = radius * Math.cos(theta * Math.PI / 360)
             * Math.cos(phi * Math.PI / 360);
 
-        camera.lookAt(testCubeMesh.position);
+        camera.lookAt(characterNode.position);
+
+        //camera.lookAt(ground.position);
 
         camera.updateMatrix();
     }
@@ -486,6 +532,7 @@
         onMouseDownPhi = phi;
         onMouseDownPosition.x = mouseEvent.clientX;
         onMouseDownPosition.y = mouseEvent.clientY;
+
     };
 
     bb.handleMouseMove = function (mouseEvent) {
@@ -526,4 +573,7 @@
         //}
     }
 
-}(window.bb = window.bb || {}, jQuery));
+}
+    (window.bb = window.bb || {}, jQuery)
+    )
+;
