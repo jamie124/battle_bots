@@ -5,7 +5,7 @@
     var initScene, render, createShape, NoiseGen,
         renderer, render_stats, physics_stats, scene, light, ground, groundGeometry, groundMaterial, camera;
 
-    var characterNode;
+    var characterNode, characterMesh, characterWheel, input;
 
     var terrainData;
 
@@ -31,20 +31,36 @@
         };
         heightImg.src = "./res/test_world.png";
 
+        var loader = new THREE.JSONLoader();
 
-        /*
-         var loader = new THREE.JSONLoader();
-         loader.load("./res/terrain.js", bb.setTerrain);
-         */
+        totalContent++;
+
+        loader.load("./res/models/basic_bot.js", function (car) {
+
+            totalContent++;
+            loader.load("./res/models/basic_engine.js", function (wheel) {
+
+                characterMesh = new Physijs.BoxMesh(
+                    car,
+                    new THREE.MeshFaceMaterial
+                );
+
+                characterMesh.doubleSided = true;
+
+                characterMesh.position.y = 20;
+                characterMesh.castShadow  = true;
+
+                characterWheel = wheel;
+
+                bb.contentLoaded();
+            });
+
+            bb.contentLoaded();
+        });
 
         totalContent++;
     };
 
-    /*
-     bb.setTerrain = function (terrainGeometry) {
-     groundGeometry = terrainGeometry;
-     }
-     */
 
     bb.contentLoaded = function () {
         console.log('Content item finished loading.');
@@ -91,6 +107,30 @@
         scene.addEventListener(
             'update',
             function () {
+                if (input && characterNode) {
+                    if (input.direction !== null) {
+                        input.steering += input.direction / 50;
+                        if (input.steering < -.6) input.steering = -.6;
+                        if (input.steering > .6) input.steering = .6;
+                    }
+                    characterNode.setSteering(input.steering, 0);
+                    characterNode.setSteering(input.steering, 1);
+
+                    if (input.power === 1) {
+                        characterNode.applyEngineForce(300);
+                    } else if (input.power === 0) {
+                        characterNode.setBrake(20, 2);
+                        characterNode.setBrake(20, 3);
+
+                        characterNode.applyEngineForce(0);
+                    } else if (input.power === -1) {
+                        characterNode.applyEngineForce(-200);
+                    } else {
+                        characterNode.applyEngineForce(0);
+                    }
+                }
+
+
                 scene.simulate(undefined, 2);
                 physics_stats.update();
             }
@@ -135,7 +175,7 @@
 
         ground = new Physijs.HeightfieldMesh(
             groundGeometry,
-            groundMaterial,
+            undefined,
             0
         );
 
@@ -151,7 +191,10 @@
 
         scene.simulate();
 
-        bb.createShapes();
+        // Create character
+        bb.initialiseCharacter();
+
+        //   bb.createShapes();
     };
 
     /**
@@ -160,13 +203,11 @@
     bb.render = function () {
         requestAnimationFrame(bb.render);
 
+        bb.updateCharacter();
+
         // Update camera look, move to actual movement method when implemented
-        //camera.lookAt(testCubeMesh.position);
         bb.updateCamera();
 
-        //  scene.simulate();
-
-        // camera.lookAt(testCubeMesh.position);
 
         renderer.render(scene, camera);
         render_stats.update();
@@ -365,6 +406,97 @@
     };
 
     /**
+     * Create character
+     */
+    bb.initialiseCharacter = function () {
+        characterNode = new Physijs.Vehicle(characterMesh, new Physijs.VehicleTuning(
+            10.88,
+            1.83,
+            0.28,
+            500,
+            10.5,
+            6000
+        ));
+
+        scene.add(characterNode);
+
+        // window.vehicle = vehicle;
+        window.scene = scene;
+
+        var wheel_material = new THREE.MeshFaceMaterial;
+
+        for (var i = 0; i < 4; i++) {
+            characterNode.addWheel(
+                characterWheel,
+                wheel_material,
+                new THREE.Vector3(
+                    i % 2 === 0 ? -1.0 : 1.0,
+                    0,
+                    i < 2 ? 3.3 : -3.2
+                ),
+                new THREE.Vector3(0, -1, 0),
+                new THREE.Vector3(-1, 0, 0),
+                0.5,
+                0.7,
+                i < 2 ? true : true
+            );
+        }
+
+        input = {
+            power: null,
+            direction: null,
+            steering: 0
+        };
+        document.addEventListener('keydown', function (ev) {
+            switch (ev.keyCode) {
+                case 65: // left
+                    input.direction = 1;
+                    break;
+
+                case 87: // forward
+                    input.power = 1;
+                    break;
+
+                case 68: // right
+                    input.direction = -1;
+                    break;
+
+                case 83: // back
+                    input.power = -1;
+                    break;
+            }
+        });
+        document.addEventListener('keyup', function (ev) {
+            switch (ev.keyCode) {
+                case 65: // left
+                    input.direction = null;
+                    break;
+
+                case 87: // forward
+                    input.power = 0;
+                    break;
+
+                case 68: // right
+                    input.direction = null;
+                    break;
+
+                case 83: // back
+                    input.power = 0;
+                    break;
+            }
+        });
+
+        new TWEEN.Tween(characterNode.mesh.material).to({opacity: 1}, 500).start();
+    };
+
+    bb.updateCharacter = function () {
+        var message = 'Character position, X:' + characterNode.mesh.position.x.toFixed(1)
+            + ' Y:' + characterNode.mesh.position.y.toFixed(1) + ' Z:' + characterNode.mesh.position.z.toFixed(1);
+
+        bb.logMessage(message);
+    };
+
+    /**
      * Convert an heightmap image into height values.
      * @param heightImg
      */
@@ -417,24 +549,9 @@
     bb.convertHeightDataToMesh = function (data, width, length) {
         var mesh = new THREE.PlaneGeometry(200, 200, width - 1, length - 1);
 
-        //var mesh  = new THREE.LandscapeGeometry(1000, 1000, 10, 10);
-
-        // var terrainTestData = new Array();
-        // var terrainVertex = {x: 0, y: 0, z: 0};
-
-        // mesh.applyMatrix(new THREE.Matrix4().makeRotationX(-Math.PI / 2));
-
-        // mesh.dynamic = true;
 
         var vertexPosition = 0;
 
-        /*
-         var count = 0;
-         for ( var i = 0, l = mesh.vertices.length; i < l; i ++ ) {
-         mesh.vertices[ i ].y = ( Math.sin( ( i + count ) * 0.3 ) * 50 ) + ( Math.sin( ( i + count ) * 0.5 ) * 50 );
-         count += 0.1;
-         }
-         */
 
         for (var z = 0; z < worldLength; z++) {
             for (var x = 0; x < worldWidth; x++) {
@@ -461,19 +578,6 @@
             }
         }
 
-        /*
-         NoiseGen = new SimplexNoise;
-
-         var mesh = new THREE.PlaneGeometry(75, 75, 50, 50);
-         for (var i = 0; i < mesh.vertices.length; i++) {
-         var vertex = mesh.vertices[i];
-         vertex.z = NoiseGen.noise(vertex.x / 10, vertex.y / 10) * 2;
-         }
-
-         */
-        //  mesh.rotation.x = Math.PI / -2;
-
-        //console.log(groundGeometry.vertices);
 
         /*
          $.post("/battlebots/debugLogging", {
@@ -487,10 +591,8 @@
          */
 
 
-        //  mesh.computeCentroids();
         mesh.computeFaceNormals();
         mesh.computeVertexNormals();
-        // mesh.computeTangents();
 
         return mesh;
     }
@@ -503,15 +605,15 @@
             * Math.cos(phi * Math.PI / 360);
         camera.position.y = radius * Math.sin(phi * Math.PI / 360);
 
-        if (camera.position.y < 20) {
-            camera.position.y = 20;
+        if (camera.position.y < 10) {
+            camera.position.y = 10;
         }
 
         //camera.position.y = 90;
         camera.position.z = radius * Math.cos(theta * Math.PI / 360)
             * Math.cos(phi * Math.PI / 360);
 
-        camera.lookAt(characterNode.position);
+        camera.lookAt(characterNode.mesh.position);
 
         //camera.lookAt(ground.position);
 
@@ -549,7 +651,7 @@
 
             var msg = "Theta: ";
             msg += theta + ", Phi: " + phi;
-            $("#log").html("<div>" + msg + "</div>");
+            bb.logMessage(msg);
 
             //  bb.updateCamera();
 
@@ -566,12 +668,16 @@
             radius -= 10;
         }
 
-        if (radius <= 50) {
+        if (radius <= 0) {
             radius = 50;
         } //else if (radius >= 300) {
         //    radius = 300;
         //}
-    }
+    };
+
+    bb.logMessage = function (message) {
+        $("#log").html("<div>" + message + "</div>");
+    };
 
 }
     (window.bb = window.bb || {}, jQuery)
