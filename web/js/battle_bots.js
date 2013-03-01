@@ -5,7 +5,9 @@
     var initScene, render, createShape, NoiseGen,
         renderer, render_stats, physics_stats, scene, light, ground, groundGeometry, groundMaterial, camera;
 
-    var characterNode, characterMesh, characterWheel, input;
+    var characterNode, engineGeometry, input;
+
+    var vehicleNode, vehicleMesh, vehicleGeo;
 
     var terrainData;
 
@@ -35,22 +37,36 @@
 
         totalContent++;
 
-        loader.load("./res/models/basic_bot.js", function (car) {
+        loader.load("./res/models/basic_bot.js", function (vehicle) {
 
             totalContent++;
-            loader.load("./res/models/basic_engine.js", function (wheel) {
+            loader.load("./res/models/basic_engine.js", function (engine) {
 
-                characterMesh = new Physijs.BoxMesh(
-                    car,
-                    new THREE.MeshFaceMaterial
-                );
+                /*
+                 characterMesh = new Physijs.BoxMesh(
+                 car,
+                 new THREE.MeshFaceMaterial
+                 );
+                 */
 
-                characterMesh.doubleSided = true;
+                /*
+                 vehicleGeo = new THREE.Mesh(
+                 car,
+                 new THREE.MeshFaceMaterial
+                 );
+                 */
 
-                characterMesh.position.y = 20;
-                characterMesh.castShadow  = true;
 
-                characterWheel = wheel;
+                /*
+                 vehicleGeo.doubleSided = true;
+
+                 vehicleGeo.position.y = 20;
+                 vehicleGeo.castShadow  = true;
+                 */
+
+                vehicleGeo = vehicle;
+
+                engineGeometry = engine;
 
                 bb.contentLoaded();
             });
@@ -113,23 +129,24 @@
                         if (input.steering < -.6) input.steering = -.6;
                         if (input.steering > .6) input.steering = .6;
                     }
-                    characterNode.setSteering(input.steering, 0);
-                    characterNode.setSteering(input.steering, 1);
+                    /*
+                     characterNode.setSteering(input.steering, 0);
+                     characterNode.setSteering(input.steering, 1);
 
-                    if (input.power === 1) {
-                        characterNode.applyEngineForce(300);
-                    } else if (input.power === 0) {
-                        characterNode.setBrake(20, 2);
-                        characterNode.setBrake(20, 3);
+                     if (input.power === 1) {
+                     characterNode.applyEngineForce(300);
+                     } else if (input.power === 0) {
+                     characterNode.setBrake(20, 2);
+                     characterNode.setBrake(20, 3);
 
-                        characterNode.applyEngineForce(0);
-                    } else if (input.power === -1) {
-                        characterNode.applyEngineForce(-200);
-                    } else {
-                        characterNode.applyEngineForce(0);
-                    }
+                     characterNode.applyEngineForce(0);
+                     } else if (input.power === -1) {
+                     characterNode.applyEngineForce(-200);
+                     } else {
+                     characterNode.applyEngineForce(0);
+                     }
+                     */
                 }
-
 
                 scene.simulate(undefined, 2);
                 physics_stats.update();
@@ -275,172 +292,80 @@
         scene.add(parent);
     };
 
-    bb.createBoxMesh = function () {
-        var cubeGeometry = new THREE.CubeGeometry(3, 3, 3),
-            material = new THREE.MeshLambertMaterial({ opacity: 100, transparent: true });
-
-        var cubeMesh = new THREE.Mesh(
-            cubeGeometry,
-            material);
-
-        cubeMesh.material.color.setRGB(Math.random() * 100 / 100, Math.random() * 100 / 100, Math.random() * 100 / 100);
-        cubeMesh.castShadow = true;
-        cubeMesh.receiveShadow = true;
-
-        cubeMesh.position.set(
-            0,
-            30,
-            0
-        );
-
-        return cubeMesh;
-
-    };
-
-    bb.doCreateShapePhysijs = function () {
-        var addshapes = false,
-            shapes = 0,
-            box_geometry = new THREE.CubeGeometry(3, 3, 3),
-            sphere_geometry = new THREE.SphereGeometry(1.5, 32, 32),
-            cylinder_geometry = new THREE.CylinderGeometry(2, 2, 1, 32),
-            cone_geometry = new THREE.CylinderGeometry(0, 2, 4, 32),
-            octahedron_geometry = new THREE.OctahedronGeometry(1.7, 1),
-            torus_geometry = new THREE.TorusKnotGeometry(1.7, .2, 32, 4),
-            shape,
-        // material = new THREE.MeshLambertMaterial({ opacity: 0, transparent: true });
-            material = Physijs.createMaterial(
-                new THREE.MeshPhongMaterial({ color: 0xff00ff }),
-                .4, // low friction
-                .6 // high restitution
-            );
-
-        switch (1) {
-            case 0:
-                testCubeMesh = new Physijs.BoxMesh(
-                    box_geometry,
-                    material
-                );
-                break;
-
-            case 1:
-                testCubeMesh = new Physijs.SphereMesh(
-                    sphere_geometry,
-                    material,
-                    undefined,
-                    { restitution: Math.random() * 1.5 }
-                );
-                break;
-        }
-
-        testCubeMesh.material.color.setRGB(Math.random() * 100 / 100, Math.random() * 100 / 100, Math.random() * 100 / 100);
-        testCubeMesh.castShadow = true;
-        testCubeMesh.receiveShadow = true;
-
-        /*
-         testCubeMesh.position.set(
-         Math.random() * 30 - 15,
-         20,
-         Math.random() * 30 - 15
-         );
-         */
-
-        testCubeMesh.position.set(
-            0,
-            100,
-            0
-        );
-
-        testCubeMesh.rotation.set(
-            Math.random() * Math.PI,
-            Math.random() * Math.PI,
-            Math.random() * Math.PI
-        );
-
-        if (addshapes) {
-            testCubeMesh.addEventListener('ready', createShape);
-        }
-        scene.add(testCubeMesh);
-
-        camera.lookAt(testCubeMesh.position);
-
-        new TWEEN.Tween(testCubeMesh.material).to({opacity: 1}, 500).start();
-
-        // document.getElementById('shapecount').textContent = (++shapes) + ' shapes created';
-    };
-
-    bb.createShapes = function () {
-        var box_geometry = new THREE.CubeGeometry(3, 3, 3),
-            sphere_geometry = new THREE.SphereGeometry(1.5, 32, 32);
-
-
-        var material = new THREE.MeshLambertMaterial({ opacity: 0, transparent: true });
-
-
-        characterNode = new Physijs.SphereMesh(
-            sphere_geometry,
-            material,
-            undefined,
-            { restitution: Math.random() * 1.5 }
-        );
-
-        characterNode.material.color.setRGB(Math.random() * 100 / 100, Math.random() * 100 / 100, Math.random() * 100 / 100);
-        characterNode.castShadow = true;
-        //characterNode.receiveShadow = true;
-
-        characterNode.position.set(
-            0,
-            30,
-            0
-        );
-
-        characterNode.rotation.set(
-            Math.random() * Math.PI,
-            Math.random() * Math.PI,
-            Math.random() * Math.PI
-        );
-
-        scene.add(characterNode);
-
-        new TWEEN.Tween(characterNode.material).to({opacity: 1}, 500).start();
-
-    };
 
     /**
      * Create character
      */
     bb.initialiseCharacter = function () {
-        characterNode = new Physijs.Vehicle(characterMesh, new Physijs.VehicleTuning(
-            10.88,
-            1.83,
-            0.28,
-            500,
-            10.5,
-            6000
-        ));
+        /*
+         characterNode = new Physijs.Vehicle(characterMesh, new Physijs.VehicleTuning(
+         10.88,
+         1.83,
+         0.28,
+         500,
+         10.5,
+         6000
+         ));
+         */
 
-        scene.add(characterNode);
+        // scene.add(characterNode);
 
         // window.vehicle = vehicle;
-        window.scene = scene;
+        //  window.scene = scene;
 
         var wheel_material = new THREE.MeshFaceMaterial;
 
+        var engines = new THREE.Object3D();
+
         for (var i = 0; i < 4; i++) {
-            characterNode.addWheel(
-                characterWheel,
-                wheel_material,
-                new THREE.Vector3(
-                    i % 2 === 0 ? -1.0 : 1.0,
-                    0,
-                    i < 2 ? 3.3 : -3.2
-                ),
-                new THREE.Vector3(0, -1, 0),
-                new THREE.Vector3(-1, 0, 0),
-                0.5,
-                0.7,
-                i < 2 ? true : true
-            );
+
+            //  var engineMesh = new THREE.Mesh(engineGeometry, new THREE.MeshFaceMaterial);
+            var engineMesh = new Physijs.BoxMesh(engineGeometry, new THREE.MeshFaceMaterial);
+
+            /*
+            engineMesh.position.set(i % 2 === 0 ? -0.9 : 0.9,
+                0.4,
+                i < 2 ? 1.2 : -1.2);
+                */
+
+            //engineMesh.rotation.set(Math.PI / 2, 0, (i % 2 === 0 ? Math.PI : 0));
+
+            engines.add(engineMesh);
+
+            //  scene.add(engineMesh);
+
+            /*
+             characterNode.addWheel(
+             characterWheel,
+             wheel_material,
+             new THREE.Vector3(
+             i % 2 === 0 ? -0.9 : 0.9,
+             0.5,
+             i < 2 ? 1.4 : -1.4
+             ),
+             new THREE.Vector3(0, -1, 0),
+             new THREE.Vector3(-1, 0, 0),
+             0.5,
+             0.7,
+             i < 2 ? true : true
+             );
+             */
         }
+
+        vehicleNode = new THREE.Object3D();
+
+        // var vehicleMesh = new THREE.Mesh(vehicleGeo, new THREE.MeshFaceMaterial);
+        vehicleMesh = new Physijs.BoxMesh(vehicleGeo, new THREE.MeshFaceMaterial);
+
+        vehicleMesh.position.set(0, 20, 0);
+        vehicleMesh.add(engines)
+
+        vehicleNode.add(vehicleMesh);
+        // vehicleNode.add(engines);
+
+        //var test = Physijs.BoxMesh(vehicleGeo);
+
+        scene.add(vehicleMesh);
 
         input = {
             power: null,
@@ -486,12 +411,13 @@
             }
         });
 
-        new TWEEN.Tween(characterNode.mesh.material).to({opacity: 1}, 500).start();
+        //new TWEEN.Tween(vehicleNode.mesh.material).to({opacity: 1}, 500).start();
+        new TWEEN.Tween(vehicleMesh.material).to({opacity: 1}, 500).start();
     };
 
     bb.updateCharacter = function () {
-        var message = 'Character position, X:' + characterNode.mesh.position.x.toFixed(1)
-            + ' Y:' + characterNode.mesh.position.y.toFixed(1) + ' Z:' + characterNode.mesh.position.z.toFixed(1);
+        var message = 'Character position, X:' + vehicleNode.position.x.toFixed(1)
+            + ' Y:' + vehicleNode.position.y.toFixed(1) + ' Z:' + vehicleNode.position.z.toFixed(1);
 
         bb.logMessage(message);
     };
@@ -613,7 +539,7 @@
         camera.position.z = radius * Math.cos(theta * Math.PI / 360)
             * Math.cos(phi * Math.PI / 360);
 
-        camera.lookAt(characterNode.mesh.position);
+        camera.lookAt(vehicleMesh.position);
 
         //camera.lookAt(ground.position);
 
